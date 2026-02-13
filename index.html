@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdaptaCV — Adaptez votre CV intelligemment</title>
+  <meta name="description"
+    content="Application IA qui adapte automatiquement votre CV à chaque offre d'emploi et génère une lettre de motivation personnalisée." />
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="icon" type="image/svg+xml" href="/logo.png
+</head>
+
+<body>
+  <div id=" app">
+  <!-- Animated Mesh Background -->
+  <div class="mesh-bg">
+    <div class="mesh-gradient mesh-1"></div>
+    <div class="mesh-gradient mesh-2"></div>
+    <div class="mesh-gradient mesh-3"></div>
+    <div class="mesh-gradient mesh-4"></div>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <!-- Floating Particles -->
+  <div class="particles" id="particles"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <i data-lucide="file-text"></i>
+        </div>
+        <span class="logo-text">AdaptaCV</span>
+        <span class="logo-badge">BETA</span>
+      </div>
+      <div class="header-actions">
+        <div class="provider-pill" id="providerPill">
+          <i data-lucide="cpu"></i>
+          <span id="footerProvider">Groq</span>
+        </div>
+        <button id="settingsBtn" class="btn-icon" title="Paramètres IA">
+          <i data-lucide="settings"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="settings" class="modal-title-icon"></i>
+          <h2>Configuration IA</h2>
+        </div>
+        <button id="closeSettingsBtn" class="btn-icon">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="aiProvider">
+            <i data-lucide="bot" class="label-icon"></i>
+            Fournisseur IA
+          </label>
+          <select id="aiProvider">
+            <option value="groq">🚀 Groq (Llama 3.3 70B) — Recommandé</option>
+            <option value="gemini">🧠 Google Gemini 2.5 Flash</option>
+            <option value="mistral">🇫🇷 Mistral AI</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="apiKey">
+            <i data-lucide="key" class="label-icon"></i>
+            Clé API
+          </label>
+          <div class="input-with-icon">
+            <input type="password" id="apiKey" placeholder="Entrez votre clé API..." />
+            <button id="toggleApiKey" class="btn-icon-sm" title="Afficher/Masquer">
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+          <div class="help-links">
+            <a href="https://console.groq.com/keys" target="_blank" id="helpLinkGroq" class="help-link">
+              <i data-lucide="external-link"></i>
+              Obtenir une clé Groq (gratuit)
+            </a>
+            <a href="https://aistudio.google.com/apikey" target="_blank" id="helpLinkGemini" class="help-link hidden">
+              <i data-lucide="external-link"></i>
+              Obtenir une clé Gemini (gratuit)
+            </a>
+            <a href="https://console.mistral.ai/api-keys" target="_blank" id="helpLinkMistral" class="help-link hidden">
+              <i data-lucide="external-link"></i>
+              Obtenir une clé Mistral (gratuit)
+            </a>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="language">
+            <i data-lucide="globe" class="label-icon"></i>
+            Langue de sortie
+          </label>
+          <select id="language">
+            <option value="fr">🇫🇷 Français</option>
+            <option value="en">🇬🇧 English</option>
+          </select>
+        </div>
+        <button id="saveSettings" class="btn btn-primary btn-full">
+          <i data-lucide="save"></i>
+          Sauvegarder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Step Indicator -->
+    <div class="steps-indicator">
+      <div class="step active" data-step="1">
+        <div class="step-circle">
+          <i data-lucide="upload" class="step-icon"></i>
+          <span class="step-number">1</span>
+        </div>
+        <span class="step-label">Votre CV</span>
+      </div>
+      <div class="step-line">
+        <div class="step-line-fill"></div>
+      </div>
+      <div class="step" data-step="2">
+        <div class="step-circle">
+          <i data-lucide="briefcase" class="step-icon"></i>
+          <span class="step-number">2</span>
+        </div>
+        <span class="step-label">Offre d'emploi</span>
+      </div>
+      <div class="step-line">
+        <div class="step-line-fill"></div>
+      </div>
+      <div class="step" data-step="3">
+        <div class="step-circle">
+          <i data-lucide="sparkles" class="step-icon"></i>
+          <span class="step-number">3</span>
+        </div>
+        <span class="step-label">Résultats</span>
+      </div>
+    </div>
+
+    <!-- Step 1: Upload CV -->
+    <section id="step1" class="step-content active">
+      <div class="card glass-card animate-in">
+        <div class="card-header">
+          <div class="card-title-row">
+            <div class="card-icon-wrapper">
+              <i data-lucide="file-up"></i>
+            </div>
+            <div>
+              <h2>Uploadez votre CV</h2>
+              <p class="card-subtitle">Glissez-déposez votre CV au format PDF ou cliquez pour parcourir</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div id="dropZone" class="drop-zone">
+            <div class="drop-zone-content">
+              <div class="drop-icon">
+                <i data-lucide="cloud-upload"></i>
+              </div>
+              <p class="drop-text">Glissez votre PDF ici</p>
+              <p class="drop-subtext">ou</p>
+              <label for="fileInput" class="btn btn-outline">
+                <i data-lucide="folder-open"></i>
+                Parcourir les fichiers
+              </label>
+              <input type="file" id="fileInput" accept=".pdf" hidden />
+              <p class="drop-hint">PDF • Max 10 Mo</p>
+            </div>
+          </div>
+          <!-- File Preview -->
+          <div id="filePreview" class="file-preview hidden">
+            <div class="file-info">
+              <div class="file-icon-wrapper">
+                <i data-lucide="file-check-2"></i>
+              </div>
+              <div class="file-details">
+                <span id="fileName" class="file-name"></span>
+                <span id="fileSize" class="file-size"></span>
+              </div>
+              <button id="removeFile" class="btn-icon-sm btn-danger-subtle" title="Supprimer">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </div>
+            <!-- PDF Page Preview -->
+            <div id="pdfPreviewContainer" class="pdf-preview-container hidden">
+              <div class="section-header">
+                <div class="section-header-left">
+                  <i data-lucide="eye" class="section-header-icon"></i>
+                  <span>Aperçu du CV</span>
+                </div>
+                <button id="togglePreview" class="btn-icon-xs" title="Réduire/Agrandir">
+                  <i data-lucide="chevron-down"></i>
+                </button>
+              </div>
+              <div id="pdfPreviewPages" class="pdf-preview-pages"></div>
+            </div>
+            <!-- Extracted Text -->
+            <div id="extractedTextContainer" class="extracted-text-container">
+              <div class="section-header">
+                <div class="section-header-left">
+                  <i data-lucide="text" class="section-header-icon"></i>
+                  <span>Texte extrait</span>
+                </div>
+                <span id="charCount" class="char-count"></span>
+              </div>
+              <div id="extractedText" class="extracted-text"></div>
+            </div>
+            <!-- Manual Input Fallback -->
+            <div id="manualInputContainer" class="manual-input-container hidden">
+              <div class="alert alert-warning">
+                <i data-lucide="alert-triangle" class="alert-icon"></i>
+                <div class="alert-content">
+                  <strong>PDF basé sur des images détecté</strong>
+                  <p>L'extraction automatique et l'OCR n'ont pas suffi. Collez le contenu de votre CV ci-dessous.</p>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="manualCVText">Contenu de votre CV</label>
+                <textarea id="manualCVText" rows="12"
+                  placeholder="Collez ici le contenu complet de votre CV..."></textarea>
+                <span id="manualCharCount" class="char-count">0 caractères</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button id="nextStep1" class="btn btn-primary" disabled>
+            Continuer
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: Job Description -->
+    <section id="step2" class="step-content">
+      <div class="card glass-card animate-in">
+        <div class="card-header">
+          <div class="card-title-row">
+            <div class="card-icon-wrapper accent-cyan">
+              <i data-lucide="briefcase"></i>
+            </div>
+            <div>
+              <h2>Offre d'emploi</h2>
+              <p class="card-subtitle">Décrivez le poste visé et collez l'offre d'emploi</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Profile Photo Upload -->
+          <div class="profile-photo-section" id="profilePhotoSection">
+            <div class="profile-photo-upload" id="profilePhotoUpload">
+              <div id="profilePhotoPreview" class="profile-photo-preview">
+                <i data-lucide="user-plus"></i>
+              </div>
+              <input type="file" id="profilePhotoInput" accept="image/*" hidden />
+            </div>
+            <div class="profile-photo-info">
+              <strong>Photo de profil</strong>
+              <p>Optionnel — intégrée au CV généré</p>
+              <button id="removeProfilePhoto" class="btn-sm-link hidden">
+                <i data-lucide="x-circle"></i>
+                Supprimer
+              </button>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="jobTitle">
+                <i data-lucide="tag" class="label-icon"></i>
+                Titre du poste
+              </label>
+              <input type="text" id="jobTitle" placeholder="Ex: Développeur Full Stack Senior" />
+            </div>
+            <div class="form-group">
+              <label for="companyName">
+                <i data-lucide="building-2" class="label-icon"></i>
+                Nom de l'entreprise
+              </label>
+              <input type="text" id="companyName" placeholder="Ex: Google, Microsoft..." />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="jobDescription">
+              <i data-lucide="file-text" class="label-icon"></i>
+              Description de l'offre
+            </label>
+            <textarea id="jobDescription" rows="10"
+              placeholder="Collez ici le texte complet de l'offre d'emploi..."></textarea>
+            <span id="jobDescCount" class="char-count">0 caractères</span>
+          </div>
+
+          <!-- CV Template Selection -->
+          <div class="template-section">
+            <div class="template-section-header">
+              <i data-lucide="layout-template" class="label-icon"></i>
+              <span>Modèle de CV</span>
+            </div>
+            <div class="template-grid template-grid-cv" id="cvTemplateGrid">
+              <div class="template-card selected" data-template="classic">
+                <div class="template-preview template-preview-classic">
+                  <div class="tp-bar"></div>
+                  <div class="tp-lines">
+                    <div class="tp-line tp-line-title"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line tp-line-short"></div>
+                  </div>
+                </div>
+                <span class="template-name">Classique</span>
+                <span class="template-desc">Simple & professionnel</span>
+                <button class="template-preview-btn" data-template="classic" data-type="cv" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+              <div class="template-card" data-template="modern">
+                <div class="template-preview template-preview-modern">
+                  <div class="tp-sidebar"></div>
+                  <div class="tp-main">
+                    <div class="tp-line tp-line-title"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line"></div>
+                  </div>
+                </div>
+                <span class="template-name">Moderne</span>
+                <span class="template-desc">2 colonnes élégant</span>
+                <button class="template-preview-btn" data-template="modern" data-type="cv" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+              <div class="template-card" data-template="minimal">
+                <div class="template-preview template-preview-minimal">
+                  <div class="tp-lines">
+                    <div class="tp-line tp-line-center tp-line-title"></div>
+                    <div class="tp-dot-row">
+                      <div class="tp-dot"></div>
+                      <div class="tp-dot"></div>
+                      <div class="tp-dot"></div>
+                    </div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line tp-line-short"></div>
+                  </div>
+                </div>
+                <span class="template-name">Minimaliste</span>
+                <span class="template-desc">Épuré & aéré</span>
+                <button class="template-preview-btn" data-template="minimal" data-type="cv" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+              <div class="template-card" data-template="executive">
+                <div class="template-preview template-preview-executive">
+                  <div class="tp-header-band"></div>
+                  <div class="tp-lines">
+                    <div class="tp-line"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line tp-line-short"></div>
+                  </div>
+                </div>
+                <span class="template-name">Exécutif</span>
+                <span class="template-desc">Sobre & haut de gamme</span>
+                <button class="template-preview-btn" data-template="executive" data-type="cv" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+              <div class="template-card" data-template="bold">
+                <div class="template-preview template-preview-bold">
+                  <div class="tp-bold-sidebar"></div>
+                  <div class="tp-main">
+                    <div class="tp-line tp-line-title"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line tp-line-short"></div>
+                  </div>
+                </div>
+                <span class="template-name">Créatif</span>
+                <span class="template-desc">Coloré & impactant</span>
+                <button class="template-preview-btn" data-template="bold" data-type="cv" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cover Letter Template Selection -->
+          <div class="template-section">
+            <div class="template-section-header">
+              <i data-lucide="pen-tool" class="label-icon"></i>
+              <span>Modèle de Lettre</span>
+            </div>
+            <div class="template-grid template-grid-3" id="letterTemplateGrid">
+              <div class="template-card selected" data-template="formal">
+                <div class="template-preview template-preview-formal">
+                  <div class="tp-lines">
+                    <div class="tp-line tp-line-short"></div>
+                    <div class="tp-spacer"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line tp-line-short"></div>
+                  </div>
+                </div>
+                <span class="template-name">Formelle</span>
+                <span class="template-desc">Traditionnel & structuré</span>
+                <button class="template-preview-btn" data-template="formal" data-type="letter" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+              <div class="template-card" data-template="creative">
+                <div class="template-preview template-preview-creative">
+                  <div class="tp-accent-bar"></div>
+                  <div class="tp-lines">
+                    <div class="tp-line tp-line-title"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line tp-line-short"></div>
+                  </div>
+                </div>
+                <span class="template-name">Créative</span>
+                <span class="template-desc">Moderne avec accents</span>
+                <button class="template-preview-btn" data-template="creative" data-type="letter" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+              <div class="template-card" data-template="elegant">
+                <div class="template-preview template-preview-elegant">
+                  <div class="tp-border-frame"></div>
+                  <div class="tp-lines">
+                    <div class="tp-line tp-line-center tp-line-title"></div>
+                    <div class="tp-line"></div>
+                    <div class="tp-line"></div>
+                  </div>
+                </div>
+                <span class="template-name">Élégante</span>
+                <span class="template-desc">Raffinée avec bordures</span>
+                <button class="template-preview-btn" data-template="elegant" data-type="letter" title="Aperçu"><i
+                    data-lucide="eye"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer card-footer-between">
+          <button id="prevStep2" class="btn btn-ghost">
+            <i data-lucide="arrow-left"></i>
+            Retour
+          </button>
+          <button id="generateBtn" class="btn btn-primary btn-glow" disabled>
+            <i data-lucide="wand-2"></i>
+            Adapter mon CV avec l'IA
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3: Results -->
+    <section id="step3" class="step-content">
+      <!-- Loading State -->
+      <div id="loadingState" class="card glass-card loading-card hidden">
+        <div class="loading-content">
+          <div class="loading-orb">
+            <div class="orb-ring orb-ring-1"></div>
+            <div class="orb-ring orb-ring-2"></div>
+            <div class="orb-ring orb-ring-3"></div>
+            <div class="orb-core">🤖</div>
+          </div>
+          <h3 id="loadingTitle">L'IA analyse votre CV et l'offre...</h3>
+          <p id="loadingSubtitle" class="loading-subtitle">Cela peut prendre quelques secondes</p>
+          <div class="loading-progress">
+            <div id="loadingProgressBar" class="loading-progress-bar"></div>
+          </div>
+          <div class="loading-steps">
+            <div id="loadingStep1" class="loading-step">
+              <div class="loading-step-icon">
+                <i data-lucide="scan-search"></i>
+              </div>
+              <span>Analyse du CV et de l'offre</span>
+            </div>
+            <div id="loadingStep2" class="loading-step">
+              <div class="loading-step-icon">
+                <i data-lucide="pencil-ruler"></i>
+              </div>
+              <span>Adaptation du contenu</span>
+            </div>
+            <div id="loadingStep3" class="loading-step">
+              <div class="loading-step-icon">
+                <i data-lucide="mail"></i>
+              </div>
+              <span>Lettre de motivation</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="resultsState" class="results-grid hidden">
+        <!-- Adapted CV -->
+        <div class="card glass-card result-card animate-in">
+          <div class="card-header">
+            <div class="result-title">
+              <div class="result-icon-wrapper">
+                <i data-lucide="file-check-2"></i>
+              </div>
+              <h2>CV Adapté</h2>
+            </div>
+            <span class="badge badge-success">
+              <i data-lucide="sparkles"></i>
+              Optimisé ATS
+            </span>
+          </div>
+          <div class="card-body">
+            <div id="adaptedCVPreview" class="result-preview"></div>
+          </div>
+          <div class="card-footer">
+            <button id="downloadCV" class="btn btn-primary btn-full">
+              <i data-lucide="download"></i>
+              Télécharger le CV (PDF)
+            </button>
+          </div>
+        </div>
+
+        <!-- Cover Letter -->
+        <div class="card glass-card result-card animate-in" style="animation-delay: 0.15s">
+          <div class="card-header">
+            <div class="result-title">
+              <div class="result-icon-wrapper accent-cyan">
+                <i data-lucide="mail-check"></i>
+              </div>
+              <h2>Lettre de Motivation</h2>
+            </div>
+            <span class="badge badge-info">
+              <i data-lucide="target"></i>
+              Personnalisée
+            </span>
+          </div>
+          <div class="card-body">
+            <div id="coverLetterPreview" class="result-preview"></div>
+          </div>
+          <div class="card-footer">
+            <button id="downloadCoverLetter" class="btn btn-secondary btn-full">
+              <i data-lucide="download"></i>
+              Télécharger la Lettre (PDF)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Adaptation Button -->
+      <div id="newAdaptation" class="new-adaptation hidden">
+        <button id="startOverBtn" class="btn btn-ghost">
+          <i data-lucide="refresh-cw"></i>
+          Nouvelle adaptation
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <p>
+        <span class="footer-logo">AdaptaCV</span>
+        <span class="footer-sep">•</span>
+        <span class="footer-privacy">
+          <i data-lucide="shield-check" class="footer-icon"></i>
+          Aucune donnée stockée
+        </span>
+      </p>
+    </div>
+  </footer>
+
+  <!-- Template Preview Modal -->
+  <div id="templatePreviewModal" class="modal-overlay hidden">
+    <div class="modal modal-preview">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="eye" class="modal-title-icon"></i>
+          <h2 id="previewModalTitle">Aperçu du modèle</h2>
+        </div>
+        <button id="closePreviewBtn" class="btn-icon">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body modal-preview-body">
+        <div id="templatePreviewContent" class="template-preview-full"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="previewSelectBtn" class="btn btn-primary">
+          <i data-lucide="check"></i>
+          Sélectionner ce modèle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+  <script>
+    // Initialize Lucide icons after page load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    });
+  </script>
+  </body>
+
+</html>
