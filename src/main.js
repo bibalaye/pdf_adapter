@@ -257,7 +257,21 @@ function setupEventListeners() {
     if (e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files[0]);
   });
 
-  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('click', (e) => {
+    // Don't programmatically trigger file input if the click originated from
+    // the <label> or the file input itself — the label already handles it
+    // natively. On mobile, calling .click() from a bubbled label event
+    // can be blocked by the browser, causing nothing to happen.
+    const fromLabel = e.target.closest('label[for="fileInput"]');
+    const fromInput = e.target === fileInput;
+    if (!fromLabel && !fromInput) {
+      fileInput.click();
+    }
+  });
+  fileInput.addEventListener('click', () => {
+    // Reset value so selecting the same file again still triggers 'change'
+    fileInput.value = '';
+  });
   fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) handleFileUpload(e.target.files[0]);
   });
