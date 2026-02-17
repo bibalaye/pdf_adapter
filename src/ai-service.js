@@ -146,32 +146,34 @@ IMPORTANT :
  */
 function buildCoverLetterPrompt(language) {
     const lang = language === 'fr' ? 'français' : 'English';
-    return `Tu es un expert en rédaction de lettres de motivation professionnelles.
+    return `Tu es un expert senior en recrutement et en rédaction de lettres de motivation percutantes pour des postes de haut niveau.
 
-Ton rôle est de rédiger une lettre de motivation personnalisée et convaincante basée sur le CV du candidat et l'offre d'emploi.
+Ton rôle est de rédiger une lettre de motivation personnalisée, professionnelle et extrêmement convaincante en utilisant la structure "Moi, Vous, Nous".
 
-RÈGLES :
-1. La lettre doit être professionnelle mais avec un ton moderne et authentique.
-2. Elle doit utiliser le vrai nom du candidat.
-3. Elle doit montrer la motivation du candidat pour ce poste SPÉCIFIQUE dans cette entreprise SPÉCIFIQUE.
-4. Elle doit mettre en relation les compétences et expériences RÉELLES du candidat avec les besoins de l'offre.
-5. Elle doit être concise (300-400 mots maximum).
-6. Ne pas inventer de compétences que le candidat n'a pas.
-7. Inclure des exemples concrets tirés de l'expérience du candidat.
-8. Réponds en ${lang}.
+RÈGLES DE RÉDACTION :
+1. TON : Professionnel, enthousiaste, et confiant sans être arrogant. Évite les clichés et les phrases toutes faites.
+2. STRUCTURE "MOI, VOUS, NOUS" :
+   - ACCROCHE (Vous) : Montre que tu connais l'entreprise, ses enjeux récents ou sa réputation. Explique pourquoi tu postules chez EUX spécifiquement.
+   - EXPÉRIENCE (Moi) : Mets en avant 2-3 réalisations concrètes de ton CV qui répondent DIRECTEMENT aux besoins de l'offre. Utilise des chiffres et des résultats.
+   - COLLABORATION (Nous) : Explique ce que vous allez accomplir ensemble. Comment tes compétences vont résoudre leurs problèmes actuels ?
+3. DÉTAILS : La lettre doit être riche et détaillée (400-500 mots). Elle ne doit pas être un simple résumé du CV.
+4. PERSONNALISATION : Utilise le nom complet du candidat et les informations de l'entreprise fournies.
+5. Réponds en ${lang}.
 
 FORMAT DE RÉPONSE :
 Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec la structure suivante :
 {
   "candidateName": "Prénom NOM du candidat",
   "subject": "Candidature au poste de [titre exact du poste visé]",
-  "greeting": "Madame, Monsieur,",
-  "opening": "Premier paragraphe d'accroche montrant l'intérêt pour le poste...",
-  "body": "Corps de la lettre reliant les compétences du candidat aux besoins de l'offre (2-3 paragraphes, utilise \\n\\n pour séparer)...",
-  "closing": "Paragraphe de conclusion avec appel à l'action...",
-  "signature": "Cordialement,\\nPrénom NOM",
-  "fullText": "La lettre complète en un seul bloc de texte formaté, commençant par l'objet puis la formule de politesse, le corps et la signature"
-}`;
+  "greeting": "Madame, Monsieur, (ou nom du recruteur si disponible)",
+  "opening": "Paragraphe d'accroche percutant sur l'entreprise et la motivation pour le poste (environ 60-80 mots)",
+  "body": "Corps de la lettre détaillé. Divise ton argumentation en 2 ou 3 paragraphes distincts (Moi, Vous, Nous). Chaque paragraphe doit être dense et argumenté. Utilise \\n\\n pour séparer les paragraphes.",
+  "closing": "Conclusion élégante, appel à l'action pour un entretien et formule de politesse standard.",
+  "signature": "Cordialement,\\n[NOM COMPLET]",
+  "fullText": "La lettre complète et parfaitement formatée."
+}
+
+IMPORTANT : Ne génère pas de placeholders comme [NOM]. Utilise les vraies données.`;
 }
 
 /**
@@ -248,7 +250,14 @@ Entreprise : ${companyName || 'Non spécifiée'}
 ${jobDescription}
 ---
 
-Rédige une lettre de motivation personnalisée en utilisant le VRAI nom du candidat et ses VRAIES expériences. Réponds UNIQUEMENT en JSON valide.`;
+INSTRUCTIONS DÉTAILLÉES :
+1. Analyse les besoins critiques de l'entreprise dans l'offre.
+2. Sélectionne les 3 réalisations les plus impressionnantes du CV qui répondent à ces besoins.
+3. Rédige une lettre "Moi - Vous - Nous" de 400 à 500 mots.
+4. Le paragraphe "Vraie Valeur" (Nous) doit expliquer concrètement comment le candidat va aider l'entreprise à atteindre ses objectifs.
+5. Assure-toi que le ton est captivant et donne envie au recruteur de rencontrer le candidat.
+
+Réponds UNIQUEMENT en JSON valide.`;
 
     if (onProgress) onProgress('letter-start');
 
