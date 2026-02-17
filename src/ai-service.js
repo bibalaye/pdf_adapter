@@ -58,12 +58,12 @@ export function getProviderDisplayName() {
  */
 function buildAdaptCVPrompt(language) {
     const lang = language === 'fr' ? 'français' : 'English';
-    return `Tu es un expert en recrutement, rédaction de CV et optimisation ATS (Applicant Tracking System).
+    return `Tu es un expert senior en recrutement, rédaction de CV professionnels et optimisation ATS (Applicant Tracking System) avec 15+ ans d'expérience.
 
-Ton rôle est d'adapter le contenu d'un CV existant pour qu'il corresponde au mieux à une offre d'emploi spécifique.
+Ton rôle est d'adapter le contenu d'un CV existant pour qu'il corresponde au mieux à une offre d'emploi spécifique. Tu dois produire un CV COMPLET, DÉTAILLÉ et PROFESSIONNEL qui impressionne les recruteurs.
 
 RÈGLES IMPÉRATIVES :
-1. Tu DOIS CONSERVER et RECOPIER EXACTEMENT toutes les informations personnelles du candidat : nom complet, prénom, email, téléphone, adresse, LinkedIn, site web, etc.
+1. Tu DOIS CONSERVER et RECOPIER EXACTEMENT toutes les informations personnelles du candidat : nom complet, prénom, email, téléphone, adresse, LinkedIn, site web, GitHub, portfolio, etc.
 2. Tu DOIS CONSERVER toutes les expériences professionnelles RÉELLES du candidat avec les dates, entreprises et postes EXACTS. NE CHANGE PAS les noms d'entreprises, les dates, ou les titres de poste originaux.
 3. Tu DOIS CONSERVER toutes les formations du candidat avec les dates, écoles et diplômes EXACTS.
 4. Tu ne dois PAS INVENTER de compétences, expériences ou formations que le candidat n'a pas.
@@ -72,6 +72,15 @@ RÈGLES IMPÉRATIVES :
 7. Tu peux AJOUTER des mots-clés ATS pertinents issus de l'offre, UNIQUEMENT s'ils correspondent à des compétences réelles du candidat.
 8. Tu dois garder un ton professionnel et factuel.
 9. Réponds en ${lang}.
+
+RÈGLES DE CONTENU DÉTAILLÉ — TRÈS IMPORTANT :
+10. Le "summary" (résumé professionnel) doit faire 4 à 6 phrases complètes. Il doit être percutant, mentionner les années d'expérience, les domaines d'expertise principaux, les technologies clés, et montrer la valeur ajoutée du candidat par rapport à l'offre.
+11. Chaque expérience professionnelle doit avoir entre 4 et 6 "bullets" (réalisations). Chaque bullet doit être détaillé (1-2 phrases), utiliser des verbes d'action forts et inclure des métriques/chiffres quand possible (ex: "Augmenté les performances de 40%", "Géré une équipe de 5 développeurs", "Déployé en production pour 10 000+ utilisateurs").
+12. Chaque formation doit inclure un champ "description" avec les mentions, spécialisations, projets notables ou mémoire si pertinent.
+13. Les "keySkills" doivent comprendre entre 8 et 15 compétences, organisées par pertinence pour l'offre.
+14. Si le candidat a des projets personnels/open source pertinents, les inclure dans "projects".
+15. Inclure les "interests" (centres d'intérêt) si le candidat en mentionne.
+16. Les "certifications" doivent inclure l'organisme certificateur si disponible.
 
 FORMAT DE RÉPONSE :
 Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec la structure suivante :
@@ -83,33 +92,53 @@ Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans back
     "phone": "téléphone du candidat (COPIÉ DU CV)",
     "location": "ville/adresse du candidat (COPIÉ DU CV)",
     "linkedin": "lien LinkedIn si présent",
-    "website": "site web si présent"
+    "website": "site web ou portfolio si présent",
+    "github": "GitHub si présent"
   },
-  "summary": "Résumé professionnel adapté à l'offre (2-3 phrases mettant en avant les compétences pertinentes)",
-  "keySkills": ["compétence 1 pertinente pour l'offre", "compétence 2", ...],
+  "summary": "Résumé professionnel DÉTAILLÉ adapté à l'offre (4-6 phrases percutantes mentionnant années d'expérience, domaines d'expertise, technologies maîtrisées et valeur ajoutée pour le poste visé)",
+  "keySkills": ["compétence 1", "compétence 2", "...", "8 à 15 compétences organisées par pertinence"],
   "experience": [
     {
       "title": "Titre du poste EXACT",
       "company": "Nom de l'entreprise EXACT",
       "period": "Dates EXACTES",
-      "bullets": ["réalisation 1 reformulée avec mots-clés de l'offre", "réalisation 2 reformulée"]
+      "description": "Brève description du rôle et du contexte (équipe, environnement technique, enjeux)",
+      "bullets": [
+        "Réalisation 1 détaillée avec verbe d'action et métriques (obligatoire: 4-6 bullets par expérience)",
+        "Réalisation 2 reformulée avec mots-clés de l'offre et impact mesurable",
+        "Réalisation 3 mettant en avant les compétences techniques utilisées",
+        "Réalisation 4 démontrant les résultats concrets et la valeur apportée"
+      ]
     }
   ],
   "education": [
     {
       "degree": "Diplôme EXACT",
       "school": "École/Université EXACTE",
-      "period": "Dates EXACTES"
+      "period": "Dates EXACTES",
+      "description": "Mention, spécialisation, matières pertinentes ou projet de fin d'études si applicable"
     }
   ],
-  "languages": ["Langue 1 - Niveau", "Langue 2 - Niveau"],
-  "certifications": ["Certification 1", "Certification 2"],
+  "projects": [
+    {
+      "name": "Nom du projet",
+      "description": "Description courte du projet et technologies utilisées",
+      "link": "URL si disponible"
+    }
+  ],
+  "languages": ["Langue 1 - Niveau (ex: Natif, Courant, Intermédiaire)", "Langue 2 - Niveau"],
+  "certifications": ["Certification 1 — Organisme (Année si connue)", "Certification 2"],
+  "interests": ["Centre d'intérêt 1", "Centre d'intérêt 2"],
   "matchScore": 85,
   "improvements": ["conseil 1 pour améliorer le CV", "conseil 2"],
   "addedKeywords": ["mot-clé ATS 1 ajouté", "mot-clé ATS 2"]
 }
 
-IMPORTANT : Tous les champs de personalInfo, experience et education doivent contenir les données RÉELLES du CV du candidat. Ne remplace JAMAIS un nom, une date, un diplôme ou une entreprise par un placeholder.`;
+IMPORTANT : 
+- Tous les champs de personalInfo, experience et education doivent contenir les données RÉELLES du CV du candidat. Ne remplace JAMAIS un nom, une date, un diplôme ou une entreprise par un placeholder.
+- Le CV généré doit être EXHAUSTIF et COMPLET. Ne raccourcis PAS le contenu. Un bon CV professionnel fait 1 à 2 pages.
+- Chaque bullet point doit être une phrase complète avec un verbe d'action au début.
+- Si des informations sont manquantes dans le CV source (pas de projets, pas de centres d'intérêt), laisse le tableau vide [].`;
 }
 
 /**
@@ -171,12 +200,19 @@ Entreprise : ${companyName || 'Non spécifiée'}
 ${jobDescription}
 ---
 
-INSTRUCTIONS :
-1. Commence par extraire TOUTES les informations personnelles du candidat (nom, prénom, email, téléphone, adresse, etc.)
+INSTRUCTIONS DÉTAILLÉES :
+1. Commence par extraire TOUTES les informations personnelles du candidat (nom, prénom, email, téléphone, adresse, LinkedIn, GitHub, site web, etc.)
 2. Conserve TOUTES les expériences professionnelles avec les dates et entreprises EXACTES
-3. Conserve TOUTES les formations avec les dates et écoles EXACTES
-4. Reformule les descriptions pour correspondre à l'offre
-5. Réorganise les compétences par pertinence
+3. Pour CHAQUE expérience, génère entre 4 et 6 bullet points DÉTAILLÉS avec des verbes d'action et des métriques/chiffres quand possible
+4. Ajoute une "description" de contexte pour chaque expérience (taille d'équipe, stack technique, enjeux)
+5. Conserve TOUTES les formations avec dates et écoles EXACTES, et ajoute une description (mention, spécialisation)
+6. Crée un résumé professionnel LONG et PERCUTANT (4-6 phrases) qui met en avant les points forts du candidat par rapport à l'offre
+7. Liste 8 à 15 compétences clés organisées par pertinence
+8. Inclus les projets personnels/professionnels notables si mentionnés
+9. Inclus les centres d'intérêt si mentionnés
+10. Reformule les descriptions pour correspondre aux mots-clés de l'offre
+
+RAPPEL : Le CV doit être COMPLET et DÉTAILLÉ, pas un résumé minimaliste. Chaque section doit être riche en contenu.
 
 Réponds UNIQUEMENT en JSON valide.`;
 
@@ -256,7 +292,7 @@ async function callOpenAIFormat(provider, apiKey, systemPrompt, userMessage) {
                 { role: 'user', content: userMessage },
             ],
             temperature: 0.7,
-            max_tokens: 4096,
+            max_tokens: 8192,
         }),
     });
 
@@ -292,7 +328,7 @@ async function callGeminiFormat(provider, apiKey, systemPrompt, userMessage) {
             ],
             generationConfig: {
                 temperature: 0.7,
-                maxOutputTokens: 4096,
+                maxOutputTokens: 8192,
                 responseMimeType: 'application/json',
             },
         }),

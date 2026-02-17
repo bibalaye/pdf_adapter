@@ -154,17 +154,26 @@ function generateClassicCV(doc, cvData, name, photoDataURL) {
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...C.accent);
             doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), margin, y);
-            y += 5;
+            y += 4.5;
+            if (exp.description) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...C.secondary);
+                const dl = doc.splitTextToSize(exp.description, contentW - 4);
+                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
+                y += 1.5;
+            }
             if (exp.bullets?.length) {
                 for (const b of exp.bullets) {
                     checkPage(5);
                     doc.setFillColor(...C.accent);
                     doc.circle(margin + 1.5, y - 1, 0.5, 'F');
                     doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...C.text);
                     const bl = doc.splitTextToSize(b, contentW - 6);
                     for (let i = 0; i < bl.length; i++) { if (i > 0) checkPage(4); doc.text(bl[i], margin + 5, y); y += 3.8; }
-                    y += 0.5;
+                    y += 0.8;
                 }
             }
             y += 4;
@@ -185,8 +194,51 @@ function generateClassicCV(doc, cvData, name, photoDataURL) {
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...C.accent);
             doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), margin, y);
-            y += 6;
+            y += 4;
+            if (edu.description) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...C.secondary);
+                const dl = doc.splitTextToSize(edu.description, contentW - 4);
+                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
+            }
+            y += 3;
         }
+    }
+
+    // Projects
+    if (cvData.projects?.length) {
+        sectionTitle('Projets');
+        for (const proj of cvData.projects) {
+            checkPage(12);
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C.text);
+            doc.text(proj.name || '', margin, y);
+            if (proj.link) { doc.setFontSize(7); doc.setTextColor(...C.accent); doc.text(proj.link, margin + doc.getTextWidth(proj.name + '  '), y); }
+            y += 4;
+            if (proj.description) {
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...C.secondary);
+                const pl = doc.splitTextToSize(proj.description, contentW - 4);
+                for (const p of pl) { checkPage(4); doc.text(p, margin + 2, y); y += 3.8; }
+            }
+            y += 3;
+        }
+    }
+
+    // Certifications
+    if (cvData.certifications?.length) {
+        sectionTitle('Certifications');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...C.text);
+        for (const cert of cvData.certifications) {
+            checkPage(5);
+            doc.text('•  ' + cert, margin, y);
+            y += 4.2;
+        }
+        y += 3;
     }
 
     // Languages
@@ -195,6 +247,15 @@ function generateClassicCV(doc, cvData, name, photoDataURL) {
         doc.setFontSize(8.5);
         doc.setTextColor(...C.text);
         doc.text(cvData.languages.join('  •  '), margin, y);
+        y += 6;
+    }
+
+    // Interests
+    if (cvData.interests?.length) {
+        sectionTitle('Centres d\'intérêt');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...C.text);
+        doc.text(cvData.interests.join('  •  '), margin, y);
         y += 6;
     }
 
@@ -416,17 +477,26 @@ function generateModernCV(doc, cvData, name, photoDataURL) {
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...Main.accent);
             doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), MAIN_X, mainY);
-            mainY += 5;
+            mainY += 4.5;
+            if (exp.description) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...Main.secondary);
+                const dl = doc.splitTextToSize(exp.description, MAIN_W - 4);
+                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.8; }
+                mainY += 1.5;
+            }
             if (exp.bullets?.length) {
                 for (const b of exp.bullets) {
                     mainCheck(5);
                     doc.setFillColor(...Main.accent);
                     doc.circle(MAIN_X + 1.5, mainY - 1, 0.5, 'F');
                     doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...Main.text);
                     const bl = doc.splitTextToSize(b, MAIN_W - 7);
                     for (let i = 0; i < bl.length; i++) { if (i > 0) mainCheck(4); doc.text(bl[i], MAIN_X + 5, mainY); mainY += 3.8; }
-                    mainY += 0.5;
+                    mainY += 0.8;
                 }
             }
             mainY += 3;
@@ -447,7 +517,48 @@ function generateModernCV(doc, cvData, name, photoDataURL) {
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...Main.accent);
             doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), MAIN_X, mainY);
-            mainY += 6;
+            mainY += 4;
+            if (edu.description) {
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...Main.secondary);
+                const dl = doc.splitTextToSize(edu.description, MAIN_W - 4);
+                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.5; }
+            }
+            mainY += 3;
+        }
+    }
+
+    // Projects
+    if (cvData.projects?.length) {
+        mainTitle('Projets');
+        for (const proj of cvData.projects) {
+            mainCheck(12);
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...Main.text);
+            doc.text(proj.name || '', MAIN_X, mainY);
+            mainY += 4;
+            if (proj.description) {
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...Main.secondary);
+                const pl = doc.splitTextToSize(proj.description, MAIN_W - 4);
+                for (const p of pl) { mainCheck(4); doc.text(p, MAIN_X + 2, mainY); mainY += 3.8; }
+            }
+            mainY += 3;
+        }
+    }
+
+    // Interests (in sidebar if space, else skip)
+    if (cvData.interests?.length && sideY < PAGE_H - 25) {
+        sideSection('Intérêts');
+        doc.setFontSize(7);
+        doc.setTextColor(...S.muted);
+        for (const interest of cvData.interests) {
+            if (sideY > PAGE_H - 15) break;
+            doc.text('•  ' + interest, M, sideY);
+            sideY += 4;
         }
     }
 
@@ -570,7 +681,6 @@ function generateMinimalCV(doc, cvData, name, photoDataURL) {
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(...C.text);
             doc.text(exp.title || '', margin, y);
-            // Period right-aligned
             if (exp.period) {
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'normal');
@@ -582,15 +692,24 @@ function generateMinimalCV(doc, cvData, name, photoDataURL) {
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...C.accent);
             doc.text(exp.company || '', margin, y);
-            y += 5;
+            y += 4.5;
+            if (exp.description) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...C.secondary);
+                const dl = doc.splitTextToSize(exp.description, contentW - 4);
+                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
+                y += 1;
+            }
             if (exp.bullets?.length) {
                 for (const b of exp.bullets) {
                     checkPage(5);
                     doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
                     doc.setTextColor(...C.text);
                     const bl = doc.splitTextToSize('—  ' + b, contentW - 4);
                     for (const l of bl) { doc.text(l, margin + 2, y); y += 3.8; }
-                    y += 0.5;
+                    y += 0.8;
                 }
             }
             y += 4;
@@ -616,8 +735,50 @@ function generateMinimalCV(doc, cvData, name, photoDataURL) {
             doc.setFontSize(8.5);
             doc.setTextColor(...C.accent);
             doc.text(edu.school || '', margin, y);
-            y += 6;
+            y += 4;
+            if (edu.description) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...C.secondary);
+                const dl = doc.splitTextToSize(edu.description, contentW - 4);
+                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
+            }
+            y += 3;
         }
+    }
+
+    // Projects
+    if (cvData.projects?.length) {
+        sectionTitle('Projets');
+        for (const proj of cvData.projects) {
+            checkPage(10);
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...C.text);
+            doc.text(proj.name || '', margin, y);
+            y += 4;
+            if (proj.description) {
+                doc.setFontSize(8.5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...C.secondary);
+                const pl = doc.splitTextToSize(proj.description, contentW - 4);
+                for (const p of pl) { checkPage(4); doc.text(p, margin + 2, y); y += 3.8; }
+            }
+            y += 3;
+        }
+    }
+
+    // Certifications
+    if (cvData.certifications?.length) {
+        sectionTitle('Certifications');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...C.text);
+        for (const cert of cvData.certifications) {
+            checkPage(5);
+            doc.text('•  ' + cert, margin, y);
+            y += 4.2;
+        }
+        y += 3;
     }
 
     // Languages
@@ -626,6 +787,15 @@ function generateMinimalCV(doc, cvData, name, photoDataURL) {
         doc.setFontSize(8.5);
         doc.setTextColor(...C.text);
         doc.text(cvData.languages.join('  •  '), margin, y);
+        y += 6;
+    }
+
+    // Interests
+    if (cvData.interests?.length) {
+        sectionTitle('Centres d\'intérêt');
+        doc.setFontSize(8.5);
+        doc.setTextColor(...C.text);
+        doc.text(cvData.interests.join('  •  '), margin, y);
         y += 6;
     }
 
@@ -895,11 +1065,76 @@ function generateExecutiveCV(doc, cvData, name, photoDataURL) {
 
     if (cvData.keySkills?.length) { sectionTitle('Compétences'); doc.setFontSize(8.5); doc.setTextColor(...C.text); const sl = doc.splitTextToSize(cvData.keySkills.join('  •  '), contentW); for (const s of sl) { checkPage(4); doc.text(s, margin, y); y += 4; } y += 4; }
 
-    if (cvData.experience?.length) { sectionTitle('Expérience'); for (const exp of cvData.experience) { checkPage(18); doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text); doc.text(exp.title || '', margin, y); y += 4.5; doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.gold); doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), margin, y); y += 5; if (exp.bullets?.length) { for (const b of exp.bullets) { checkPage(5); doc.setFillColor(...C.gold); doc.circle(margin + 1.5, y - 1, 0.5, 'F'); doc.setFontSize(8.5); doc.setTextColor(...C.text); const bl = doc.splitTextToSize(b, contentW - 6); for (let i = 0; i < bl.length; i++) { if (i > 0) checkPage(4); doc.text(bl[i], margin + 5, y); y += 3.8; } y += 0.5; } } y += 3; } }
+    if (cvData.experience?.length) {
+        sectionTitle('Expérience');
+        for (const exp of cvData.experience) {
+            checkPage(18);
+            doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text);
+            doc.text(exp.title || '', margin, y); y += 4.5;
+            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.gold);
+            doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), margin, y); y += 4.5;
+            if (exp.description) {
+                doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(...C.secondary);
+                const dl = doc.splitTextToSize(exp.description, contentW - 4);
+                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
+                y += 1.5;
+            }
+            if (exp.bullets?.length) {
+                for (const b of exp.bullets) {
+                    checkPage(5);
+                    doc.setFillColor(...C.gold); doc.circle(margin + 1.5, y - 1, 0.5, 'F');
+                    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text);
+                    const bl = doc.splitTextToSize(b, contentW - 6);
+                    for (let i = 0; i < bl.length; i++) { if (i > 0) checkPage(4); doc.text(bl[i], margin + 5, y); y += 3.8; }
+                    y += 0.8;
+                }
+            }
+            y += 3;
+        }
+    }
 
-    if (cvData.education?.length) { sectionTitle('Formation'); for (const edu of cvData.education) { checkPage(12); doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text); doc.text(edu.degree || '', margin, y); y += 4.5; doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.gold); doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), margin, y); y += 6; } }
+    if (cvData.education?.length) {
+        sectionTitle('Formation');
+        for (const edu of cvData.education) {
+            checkPage(12);
+            doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text);
+            doc.text(edu.degree || '', margin, y); y += 4.5;
+            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.gold);
+            doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), margin, y); y += 4;
+            if (edu.description) {
+                doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(...C.secondary);
+                const dl = doc.splitTextToSize(edu.description, contentW - 4);
+                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
+            }
+            y += 3;
+        }
+    }
+
+    if (cvData.projects?.length) {
+        sectionTitle('Projets');
+        for (const proj of cvData.projects) {
+            checkPage(10);
+            doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text);
+            doc.text(proj.name || '', margin, y); y += 4;
+            if (proj.description) {
+                doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.secondary);
+                const pl = doc.splitTextToSize(proj.description, contentW - 4);
+                for (const p of pl) { checkPage(4); doc.text(p, margin + 2, y); y += 3.8; }
+            }
+            y += 3;
+        }
+    }
+
+    if (cvData.certifications?.length) {
+        sectionTitle('Certifications');
+        doc.setFontSize(8.5); doc.setTextColor(...C.text);
+        for (const cert of cvData.certifications) { checkPage(5); doc.text('•  ' + cert, margin, y); y += 4.2; }
+        y += 3;
+    }
 
     if (cvData.languages?.length) { sectionTitle('Langues'); doc.setFontSize(8.5); doc.setTextColor(...C.text); doc.text(cvData.languages.join('  •  '), margin, y); y += 6; }
+
+    if (cvData.interests?.length) { sectionTitle('Centres d\'intérêt'); doc.setFontSize(8.5); doc.setTextColor(...C.text); doc.text(cvData.interests.join('  •  '), margin, y); y += 6; }
 
     addInvisibleATSKeywords(doc, cvData.addedKeywords);
 }
@@ -974,9 +1209,77 @@ function generateBoldCV(doc, cvData, name, photoDataURL) {
 
     if (cvData.summary) { mainTitle('Profil'); doc.setFontSize(9); doc.setFont('helvetica', 'italic'); doc.setTextColor(...Main.secondary); const sl = doc.splitTextToSize(cvData.summary, MAIN_W); for (const s of sl) { mainCheck(4.5); doc.text(s, MAIN_X, mainY); mainY += 4.2; } mainY += 3; }
 
-    if (cvData.experience?.length) { mainTitle('Expérience'); for (const exp of cvData.experience) { mainCheck(20); doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text); doc.text(exp.title || '', MAIN_X, mainY); mainY += 4.5; doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent); doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), MAIN_X, mainY); mainY += 5; if (exp.bullets?.length) { for (const b of exp.bullets) { mainCheck(5); doc.setFillColor(...Main.accent); doc.circle(MAIN_X + 1.5, mainY - 1, 0.5, 'F'); doc.setFontSize(8.5); doc.setTextColor(...Main.text); const bl = doc.splitTextToSize(b, MAIN_W - 7); for (let i = 0; i < bl.length; i++) { if (i > 0) mainCheck(4); doc.text(bl[i], MAIN_X + 5, mainY); mainY += 3.8; } mainY += 0.5; } } mainY += 3; } }
+    if (cvData.experience?.length) {
+        mainTitle('Expérience');
+        for (const exp of cvData.experience) {
+            mainCheck(20);
+            doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text);
+            doc.text(exp.title || '', MAIN_X, mainY); mainY += 4.5;
+            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent);
+            doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), MAIN_X, mainY); mainY += 4.5;
+            if (exp.description) {
+                doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(...Main.secondary);
+                const dl = doc.splitTextToSize(exp.description, MAIN_W - 4);
+                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.8; }
+                mainY += 1.5;
+            }
+            if (exp.bullets?.length) {
+                for (const b of exp.bullets) {
+                    mainCheck(5);
+                    doc.setFillColor(...Main.accent); doc.circle(MAIN_X + 1.5, mainY - 1, 0.5, 'F');
+                    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.text);
+                    const bl = doc.splitTextToSize(b, MAIN_W - 7);
+                    for (let i = 0; i < bl.length; i++) { if (i > 0) mainCheck(4); doc.text(bl[i], MAIN_X + 5, mainY); mainY += 3.8; }
+                    mainY += 0.8;
+                }
+            }
+            mainY += 3;
+        }
+    }
 
-    if (cvData.education?.length) { mainTitle('Formation'); for (const edu of cvData.education) { mainCheck(14); doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text); doc.text(edu.degree || '', MAIN_X, mainY); mainY += 4.5; doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent); doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), MAIN_X, mainY); mainY += 6; } }
+    if (cvData.education?.length) {
+        mainTitle('Formation');
+        for (const edu of cvData.education) {
+            mainCheck(14);
+            doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text);
+            doc.text(edu.degree || '', MAIN_X, mainY); mainY += 4.5;
+            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent);
+            doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), MAIN_X, mainY); mainY += 4;
+            if (edu.description) {
+                doc.setFontSize(7.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(...Main.secondary);
+                const dl = doc.splitTextToSize(edu.description, MAIN_W - 4);
+                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.5; }
+            }
+            mainY += 3;
+        }
+    }
+
+    if (cvData.projects?.length) {
+        mainTitle('Projets');
+        for (const proj of cvData.projects) {
+            mainCheck(12);
+            doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text);
+            doc.text(proj.name || '', MAIN_X, mainY); mainY += 4;
+            if (proj.description) {
+                doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.secondary);
+                const pl = doc.splitTextToSize(proj.description, MAIN_W - 4);
+                for (const p of pl) { mainCheck(4); doc.text(p, MAIN_X + 2, mainY); mainY += 3.8; }
+            }
+            mainY += 3;
+        }
+    }
+
+    // Interests in sidebar if space
+    if (cvData.interests?.length && sideY < PAGE_H - 25) {
+        sideSection('Intérêts');
+        doc.setFontSize(7);
+        doc.setTextColor(...S.muted);
+        for (const interest of cvData.interests) {
+            if (sideY > PAGE_H - 15) break;
+            doc.text('•  ' + interest, M, sideY);
+            sideY += 4;
+        }
+    }
 
     addInvisibleATSKeywords(doc, cvData.addedKeywords);
 }

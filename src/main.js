@@ -140,12 +140,10 @@ function updateFooterProvider() {
 }
 
 /**
- * Re-initialize Lucide icons (needed after dynamic DOM changes)
+ * No-op replacement for Lucide icons — Material Symbols load via CSS.
  */
 function refreshLucideIcons() {
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
+  // Material Symbols are loaded via CSS font, no JS init needed.
 }
 
 // ============================================================
@@ -433,11 +431,11 @@ function removeProfilePhoto() {
   removeProfilePhotoBtn.classList.add('hidden');
   profilePhotoInput.value = '';
 
-  // Re-inject Lucide icon
-  const icon = document.createElement('i');
-  icon.setAttribute('data-lucide', 'user-plus');
+  // Re-inject Material Symbols icon
+  const icon = document.createElement('span');
+  icon.className = 'material-symbols-outlined text-3xl';
+  icon.textContent = 'person_add';
   profilePhotoPreview.appendChild(icon);
-  refreshLucideIcons();
   showToast('Photo supprimée.', 'info');
 }
 

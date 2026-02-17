@@ -8,594 +8,850 @@
   <meta name="description"
     content="Application IA qui adapte automatiquement votre CV à chaque offre d'emploi et génère une lettre de motivation personnalisée." />
   <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-  <link rel="icon" type="image/png" href="/logo.png">
+    rel="stylesheet" />
+  <!-- Material Symbols -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#6b5be6",
+            "primary-dark": "#5948d3",
+            "primary-light": "#8b7ef0",
+            "background-light": "#f8f6f3",
+            "background-dark": "#131121",
+            "navy-accent": "#1a1a2e",
+          },
+          fontFamily: {
+            "display": ["Space Grotesk", "sans-serif"],
+            "body": ["Inter", "sans-serif"],
+          },
+          borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px" },
+          boxShadow: {
+            'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
+            'glass-hover': '0 8px 32px 0 rgba(107, 91, 230, 0.15)',
+            'glow': '0 0 15px rgba(107, 91, 230, 0.5)',
+          }
+        },
+      },
+    }
+  </script>
+  <link rel="icon" type="image/png" href="/logo.png" />
 </head>
 
-<body>
-  <div id="app">
-    <!-- Animated Mesh Background -->
-    <div class="mesh-bg">
-      <div class="mesh-gradient mesh-1"></div>
-      <div class="mesh-gradient mesh-2"></div>
-      <div class="mesh-gradient mesh-3"></div>
-      <div class="mesh-gradient mesh-4"></div>
-      <div class="noise-overlay"></div>
-    </div>
+<body
+  class="mesh-gradient-bg min-h-screen text-navy-accent font-body overflow-x-hidden selection:bg-primary selection:text-white antialiased">
+
+  <div id="app" class="relative flex flex-col min-h-screen">
 
     <!-- Floating Particles -->
     <div class="particles" id="particles"></div>
 
-    <!-- Header -->
-    <header class="header">
-      <div class="header-inner">
-        <div class="logo">
-          <div class="logo-icon">
-            <img src="/logo.png" alt="AdaptaCV Logo" style="width: 28px; height: 28px; object-fit: contain;">
+    <!-- ============================================ -->
+    <!-- HEADER / NAV                                 -->
+    <!-- ============================================ -->
+    <nav class="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3">
+      <div class="glass-panel mx-auto max-w-5xl rounded-xl shadow-glass px-5 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="size-9 bg-gradient-to-br from-primary to-primary-dark rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/25">
+            <img src="/logo.png" alt="AdaptaCV Logo" style="width: 22px; height: 22px; object-fit: contain;" />
           </div>
-          <span class="logo-text">AdaptaCV</span>
-          <span class="logo-badge">BETA</span>
+          <h2 class="text-lg font-display font-bold tracking-tight">AdaptaCV</h2>
+          <span
+            class="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-primary/20">BETA</span>
         </div>
-        <div class="header-actions">
-          <div class="provider-pill" id="providerPill">
-            <i data-lucide="cpu"></i>
-            <span id="footerProvider">Groq</span>
+        <div class="flex items-center gap-2.5">
+          <div id="providerPill"
+            class="hidden md:flex items-center gap-1.5 bg-white/50 px-3 py-1.5 rounded-lg border border-primary/10">
+            <div class="relative size-2 mr-1">
+              <div class="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
+              <div class="relative size-2 bg-green-500 rounded-full"></div>
+            </div>
+            <span id="footerProvider" class="text-xs font-semibold uppercase tracking-wider opacity-80">Groq</span>
           </div>
-          <button id="settingsBtn" class="btn-icon" title="Paramètres IA">
-            <i data-lucide="settings"></i>
+          <button id="settingsBtn"
+            class="flex size-9 items-center justify-center rounded-lg border border-black/8 bg-white text-gray-500 hover:bg-primary/5 hover:text-primary transition-all"
+            title="Paramètres IA">
+            <span class="material-symbols-outlined text-[18px]">settings</span>
           </button>
         </div>
       </div>
-    </header>
+    </nav>
 
-    <!-- Settings Modal -->
+    <!-- ============================================ -->
+    <!-- SETTINGS MODAL                               -->
+    <!-- ============================================ -->
     <div id="settingsModal" class="modal-overlay hidden">
-      <div class="modal">
-        <div class="modal-header">
-          <div class="modal-title">
-            <i data-lucide="settings" class="modal-title-icon"></i>
-            <h2>Configuration IA</h2>
+      <div class="glass-panel w-[90%] max-w-md rounded-2xl shadow-2xl">
+        <div class="flex items-center justify-between p-5 pb-0">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-xl">settings</span>
+            <h2 class="font-display text-lg font-bold">Configuration IA</h2>
           </div>
-          <button id="closeSettingsBtn" class="btn-icon">
-            <i data-lucide="x"></i>
+          <button id="closeSettingsBtn"
+            class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="aiProvider">
-              <i data-lucide="bot" class="label-icon"></i>
+        <div class="p-5 space-y-4">
+          <div>
+            <label for="aiProvider"
+              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <span class="material-symbols-outlined text-primary text-sm opacity-60">smart_toy</span>
               Fournisseur IA
             </label>
-            <select id="aiProvider">
+            <select id="aiProvider"
+              class="form-select w-full h-11 rounded-xl border-0 bg-gray-50 px-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary">
               <option value="groq">🚀 Groq (Llama 3.3 70B) — Recommandé</option>
               <option value="gemini">🧠 Google Gemini 2.5 Flash</option>
               <option value="mistral">🇫🇷 Mistral AI</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="apiKey">
-              <i data-lucide="key" class="label-icon"></i>
+          <div>
+            <label for="apiKey"
+              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <span class="material-symbols-outlined text-primary text-sm opacity-60">key</span>
               Clé API
             </label>
-            <div class="input-with-icon">
-              <input type="password" id="apiKey" placeholder="Entrez votre clé API..." />
-              <button id="toggleApiKey" class="btn-icon-sm" title="Afficher/Masquer">
-                <i data-lucide="eye"></i>
+            <div class="relative">
+              <input type="password" id="apiKey" placeholder="Entrez votre clé API..."
+                class="form-input w-full h-11 rounded-xl border-0 bg-gray-50 px-4 pr-11 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary" />
+              <button id="toggleApiKey"
+                class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600">
+                <span class="material-symbols-outlined text-lg">visibility</span>
               </button>
             </div>
-            <div class="help-links">
-              <a href="https://console.groq.com/keys" target="_blank" id="helpLinkGroq" class="help-link">
-                <i data-lucide="external-link"></i>
-                Obtenir une clé Groq (gratuit)
+            <div class="mt-2 space-y-1">
+              <a href="https://console.groq.com/keys" target="_blank" id="helpLinkGroq"
+                class="inline-flex items-center gap-1 text-xs text-primary opacity-75 hover:opacity-100 hover:underline">
+                <span class="material-symbols-outlined text-xs">open_in_new</span> Obtenir une clé Groq (gratuit)
               </a>
-              <a href="https://aistudio.google.com/apikey" target="_blank" id="helpLinkGemini" class="help-link hidden">
-                <i data-lucide="external-link"></i>
-                Obtenir une clé Gemini (gratuit)
+              <a href="https://aistudio.google.com/apikey" target="_blank" id="helpLinkGemini"
+                class="hidden inline-flex items-center gap-1 text-xs text-primary opacity-75 hover:opacity-100 hover:underline">
+                <span class="material-symbols-outlined text-xs">open_in_new</span> Obtenir une clé Gemini (gratuit)
               </a>
               <a href="https://console.mistral.ai/api-keys" target="_blank" id="helpLinkMistral"
-                class="help-link hidden">
-                <i data-lucide="external-link"></i>
-                Obtenir une clé Mistral (gratuit)
+                class="hidden inline-flex items-center gap-1 text-xs text-primary opacity-75 hover:opacity-100 hover:underline">
+                <span class="material-symbols-outlined text-xs">open_in_new</span> Obtenir une clé Mistral (gratuit)
               </a>
             </div>
           </div>
-          <div class="form-group">
-            <label for="language">
-              <i data-lucide="globe" class="label-icon"></i>
+          <div>
+            <label for="language"
+              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <span class="material-symbols-outlined text-primary text-sm opacity-60">language</span>
               Langue de sortie
             </label>
-            <select id="language">
+            <select id="language"
+              class="form-select w-full h-11 rounded-xl border-0 bg-gray-50 px-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary">
               <option value="fr">🇫🇷 Français</option>
               <option value="en">🇬🇧 English</option>
             </select>
           </div>
-          <button id="saveSettings" class="btn btn-primary btn-full">
-            <i data-lucide="save"></i>
+          <button id="saveSettings"
+            class="w-full flex items-center justify-center gap-2 h-11 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-95">
+            <span class="material-symbols-outlined text-lg">save</span>
             Sauvegarder
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="main">
-      <!-- Step Indicator -->
-      <div class="steps-indicator">
-        <div class="step active" data-step="1">
-          <div class="step-circle">
-            <i data-lucide="upload" class="step-icon"></i>
-            <span class="step-number">1</span>
-          </div>
-          <span class="step-label">Votre CV</span>
-        </div>
-        <div class="step-line">
-          <div class="step-line-fill"></div>
-        </div>
-        <div class="step" data-step="2">
-          <div class="step-circle">
-            <i data-lucide="briefcase" class="step-icon"></i>
-            <span class="step-number">2</span>
-          </div>
-          <span class="step-label">Offre d'emploi</span>
-        </div>
-        <div class="step-line">
-          <div class="step-line-fill"></div>
-        </div>
-        <div class="step" data-step="3">
-          <div class="step-circle">
-            <i data-lucide="sparkles" class="step-icon"></i>
-            <span class="step-number">3</span>
-          </div>
-          <span class="step-label">Résultats</span>
-        </div>
-      </div>
+    <!-- ============================================ -->
+    <!-- MAIN CONTENT                                 -->
+    <!-- ============================================ -->
+    <main class="flex-1 pt-24 pb-10 px-4 md:px-6">
+      <div class="w-full max-w-5xl mx-auto flex flex-col gap-6">
 
-      <!-- Step 1: Upload CV -->
-      <section id="step1" class="step-content active">
-        <div class="card glass-card animate-in">
-          <div class="card-header">
-            <div class="card-title-row">
-              <div class="card-icon-wrapper">
-                <i data-lucide="file-up"></i>
+        <!-- ====== STEP INDICATOR ====== -->
+        <div class="steps-indicator w-full max-w-lg mx-auto mb-2">
+          <div class="flex justify-between items-center relative">
+            <!-- Progress line BG -->
+            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded-full z-0"></div>
+            <!-- Step Line 1 -->
+            <div
+              class="step-line absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full z-0 transition-all duration-500"
+              style="width:0%"></div>
+            <!-- Step 1 -->
+            <div class="step active relative z-10 flex flex-col items-center gap-2" data-step="1">
+              <div
+                class="step-circle size-9 rounded-full bg-primary text-white flex items-center justify-center shadow-lg ring-4 ring-white transition-all">
+                <span class="material-symbols-outlined text-base step-icon" style="display:none;">upload_file</span>
+                <span class="step-number font-display font-medium text-sm">1</span>
               </div>
-              <div>
-                <h2>Uploadez votre CV</h2>
-                <p class="card-subtitle">Glissez-déposez votre CV au format PDF ou cliquez pour parcourir</p>
+              <span class="step-label text-xs font-semibold text-primary uppercase tracking-wider">Votre CV</span>
+            </div>
+            <!-- Step Line Spacer -->
+            <div class="step-line relative z-0 flex-1"></div>
+            <!-- Step 2 -->
+            <div class="step relative z-10 flex flex-col items-center gap-2" data-step="2">
+              <div
+                class="step-circle size-9 rounded-full bg-white border-2 border-gray-200 text-gray-400 flex items-center justify-center ring-4 ring-white transition-all">
+                <span class="material-symbols-outlined text-base step-icon" style="display:none;">work</span>
+                <span class="step-number font-display font-medium text-sm">2</span>
               </div>
+              <span class="step-label text-xs font-medium text-gray-400 uppercase tracking-wider">Offre</span>
+            </div>
+            <!-- Step Line Spacer -->
+            <div class="step-line relative z-0 flex-1"></div>
+            <!-- Step 3 -->
+            <div class="step relative z-10 flex flex-col items-center gap-2" data-step="3">
+              <div
+                class="step-circle size-9 rounded-full bg-white border-2 border-gray-200 text-gray-400 flex items-center justify-center ring-4 ring-white transition-all">
+                <span class="material-symbols-outlined text-base step-icon" style="display:none;">auto_awesome</span>
+                <span class="step-number font-display font-medium text-sm">3</span>
+              </div>
+              <span class="step-label text-xs font-medium text-gray-400 uppercase tracking-wider">Résultats</span>
             </div>
           </div>
-          <div class="card-body">
-            <div id="dropZone" class="drop-zone">
-              <div class="drop-zone-content">
-                <div class="drop-icon">
-                  <i data-lucide="cloud-upload"></i>
-                </div>
-                <p class="drop-text">Glissez votre PDF ici</p>
-                <p class="drop-subtext">ou</p>
-                <label for="fileInput" class="btn btn-outline">
-                  <i data-lucide="folder-open"></i>
-                  Parcourir les fichiers
-                </label>
-                <input type="file" id="fileInput" accept=".pdf"
-                  style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);pointer-events:none;" />
-                <p class="drop-hint">PDF • Max 10 Mo</p>
+        </div>
+
+        <!-- ====================================================== -->
+        <!-- STEP 1: UPLOAD CV                                      -->
+        <!-- ====================================================== -->
+        <section id="step1" class="step-content active">
+          <div class="glass-panel rounded-2xl shadow-glass overflow-hidden flex flex-col md:flex-row min-h-[480px]">
+            <!-- Left: Upload Area -->
+            <div
+              class="flex-1 p-8 md:p-10 flex flex-col justify-center items-center text-center border-b md:border-b-0 md:border-r border-gray-100">
+              <div class="mb-6">
+                <h1 class="font-display text-3xl md:text-4xl font-bold text-navy-accent mb-3 leading-tight">
+                  Uploadez votre CV
+                </h1>
+                <p class="text-gray-500 max-w-md mx-auto leading-relaxed text-sm">
+                  Glissez-déposez votre CV au format PDF ou cliquez pour parcourir. Notre IA extrait compétences,
+                  expérience et détails automatiquement.
+                </p>
               </div>
-            </div>
-            <!-- File Preview -->
-            <div id="filePreview" class="file-preview hidden">
-              <div class="file-info">
-                <div class="file-icon-wrapper">
-                  <i data-lucide="file-check-2"></i>
-                </div>
-                <div class="file-details">
-                  <span id="fileName" class="file-name"></span>
-                  <span id="fileSize" class="file-size"></span>
-                </div>
-                <button id="removeFile" class="btn-icon-sm btn-danger-subtle" title="Supprimer">
-                  <i data-lucide="trash-2"></i>
-                </button>
-              </div>
-              <!-- PDF Page Preview -->
-              <div id="pdfPreviewContainer" class="pdf-preview-container hidden">
-                <div class="section-header">
-                  <div class="section-header-left">
-                    <i data-lucide="eye" class="section-header-icon"></i>
-                    <span>Aperçu du CV</span>
+              <!-- Drop Zone -->
+              <div id="dropZone" class="w-full max-w-md group cursor-pointer relative">
+                <div
+                  class="dashed-border-animated bg-white/40 rounded-xl p-8 transition-all duration-300 hover:bg-primary/5 hover:scale-[1.01]">
+                  <div class="flex flex-col items-center gap-3">
+                    <div
+                      class="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <span class="material-symbols-outlined text-3xl">cloud_upload</span>
+                    </div>
+                    <div>
+                      <p class="text-base font-bold font-display text-navy-accent">Glissez votre PDF ici</p>
+                      <p class="text-xs text-gray-400 mt-1">ou</p>
+                    </div>
+                    <label for="fileInput"
+                      class="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/30 transition-all hover:shadow-primary/50 flex items-center gap-2 cursor-pointer">
+                      <span class="material-symbols-outlined text-lg">folder_open</span>
+                      Parcourir les fichiers
+                    </label>
+                    <input type="file" id="fileInput" accept=".pdf"
+                      style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);pointer-events:none;" />
+                    <p class="text-[11px] text-gray-400 mt-1">PDF • Max 10 Mo</p>
                   </div>
-                  <button id="togglePreview" class="btn-icon-xs" title="Réduire/Agrandir">
-                    <i data-lucide="chevron-down"></i>
+                </div>
+              </div>
+              <!-- File Preview -->
+              <div id="filePreview" class="hidden w-full max-w-md mt-4 space-y-3">
+                <div
+                  class="file-info flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-white/50 shadow-sm">
+                  <div class="size-10 rounded-lg bg-red-50 flex items-center justify-center text-red-500">
+                    <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <span id="fileName" class="block text-sm font-semibold text-navy-accent truncate"></span>
+                    <span id="fileSize" class="text-xs text-gray-400"></span>
+                  </div>
+                  <button id="removeFile"
+                    class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Supprimer">
+                    <span class="material-symbols-outlined text-lg">delete</span>
                   </button>
                 </div>
-                <div id="pdfPreviewPages" class="pdf-preview-pages"></div>
-              </div>
-              <!-- Extracted Text -->
-              <div id="extractedTextContainer" class="extracted-text-container">
-                <div class="section-header">
-                  <div class="section-header-left">
-                    <i data-lucide="text" class="section-header-icon"></i>
-                    <span>Texte extrait</span>
+                <!-- PDF Page Preview -->
+                <div id="pdfPreviewContainer" class="hidden">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                      <span class="material-symbols-outlined text-sm text-primary">visibility</span>
+                      <span>Aperçu du CV</span>
+                    </div>
+                    <button id="togglePreview" class="p-1 text-gray-400 hover:text-gray-600" title="Réduire/Agrandir">
+                      <span class="material-symbols-outlined text-lg">expand_more</span>
+                    </button>
                   </div>
-                  <span id="charCount" class="char-count"></span>
+                  <div id="pdfPreviewPages"
+                    class="pdf-preview-pages overflow-auto max-h-64 rounded-lg bg-white/50 p-2 space-y-2"></div>
                 </div>
-                <div id="extractedText" class="extracted-text"></div>
-              </div>
-              <!-- Manual Input Fallback -->
-              <div id="manualInputContainer" class="manual-input-container hidden">
-                <div class="alert alert-warning">
-                  <i data-lucide="alert-triangle" class="alert-icon"></i>
-                  <div class="alert-content">
-                    <strong>PDF basé sur des images détecté</strong>
-                    <p>L'extraction automatique et l'OCR n'ont pas suffi. Collez le contenu de votre CV ci-dessous.</p>
+                <!-- Extracted Text -->
+                <div id="extractedTextContainer" class="extracted-text-container">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                      <span class="material-symbols-outlined text-sm text-primary">text_snippet</span>
+                      <span>Texte extrait</span>
+                    </div>
+                    <span id="charCount" class="text-[11px] font-medium text-gray-400"></span>
+                  </div>
+                  <div id="extractedText"
+                    class="extracted-text bg-white/50 rounded-lg p-3 text-xs text-gray-600 max-h-40 overflow-auto leading-relaxed border border-white/40">
                   </div>
                 </div>
-                <div class="form-group">
-                  <label for="manualCVText">Contenu de votre CV</label>
-                  <textarea id="manualCVText" rows="12"
-                    placeholder="Collez ici le contenu complet de votre CV..."></textarea>
-                  <span id="manualCharCount" class="char-count">0 caractères</span>
+                <!-- Manual Input Fallback -->
+                <div id="manualInputContainer" class="hidden">
+                  <div class="flex items-start gap-2.5 bg-amber-50 rounded-xl p-3 border border-amber-200 mb-3">
+                    <span class="material-symbols-outlined text-amber-500 mt-0.5">warning</span>
+                    <div>
+                      <strong class="text-sm text-amber-800">PDF basé sur des images détecté</strong>
+                      <p class="text-xs text-amber-600 mt-0.5">L'extraction automatique n'a pas suffi. Collez le contenu
+                        de votre CV ci-dessous.</p>
+                    </div>
+                  </div>
+                  <label for="manualCVText" class="text-xs font-semibold text-gray-600 mb-1.5 block">Contenu de votre
+                    CV</label>
+                  <textarea id="manualCVText" rows="8" placeholder="Collez ici le contenu complet de votre CV..."
+                    class="w-full rounded-xl border-0 bg-white/60 p-3 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary resize-y"></textarea>
+                  <span id="manualCharCount" class="text-[11px] text-gray-400">0 caractères</span>
+                </div>
+              </div>
+            </div>
+            <!-- Right: Info Panel -->
+            <div class="w-full md:w-[340px] bg-white/30 p-6 flex flex-col">
+              <div class="flex items-center justify-between mb-5">
+                <h3 class="font-display font-bold text-base">Analyse en direct</h3>
+                <span class="text-[10px] font-mono bg-navy-accent/5 px-2 py-0.5 rounded">IDLE</span>
+              </div>
+              <div class="flex-1 flex flex-col gap-3">
+                <div class="bg-white/60 rounded-xl p-3 border border-white/40 shadow-sm opacity-50">
+                  <div class="flex items-start gap-2.5">
+                    <div class="w-9 h-11 bg-gray-200 rounded flex items-center justify-center">
+                      <span class="material-symbols-outlined text-gray-400 text-lg">description</span>
+                    </div>
+                    <div class="flex-1 space-y-1.5 py-0.5">
+                      <div class="h-2 bg-gray-200 rounded w-3/4"></div>
+                      <div class="h-2 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-auto bg-primary/5 rounded-xl p-4 border border-primary/10 relative overflow-hidden">
+                  <div class="absolute -right-3 -top-3 text-primary/10 transform rotate-12">
+                    <span class="material-symbols-outlined text-[80px]">psychology</span>
+                  </div>
+                  <h4 class="font-display font-bold text-primary text-xs mb-1.5 relative z-10">Logique d'extraction IA
+                  </h4>
+                  <p class="text-[11px] text-navy-accent/70 leading-relaxed relative z-10">
+                    Après l'upload, notre modèle IA parse la structure de votre document et identifie
+                    <span class="font-semibold text-primary">Compétences</span>,
+                    <span class="font-semibold text-primary">Expérience</span> et
+                    <span class="font-semibold text-primary">Formation</span> automatiquement.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-          <div class="card-footer">
-            <button id="nextStep1" class="btn btn-primary" disabled>
+          <!-- Footer Actions -->
+          <div class="flex justify-end items-center mt-4 px-1">
+            <button id="nextStep1"
+              class="bg-gray-200 text-gray-400 cursor-not-allowed px-7 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all disabled:opacity-60"
+              disabled>
               Continuer
-              <i data-lucide="arrow-right"></i>
+              <span class="material-symbols-outlined text-lg">arrow_forward</span>
             </button>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- Step 2: Job Description -->
-      <section id="step2" class="step-content">
-        <div class="card glass-card animate-in">
-          <div class="card-header">
-            <div class="card-title-row">
-              <div class="card-icon-wrapper accent-cyan">
-                <i data-lucide="briefcase"></i>
+        <!-- ====================================================== -->
+        <!-- STEP 2: JOB CONFIGURATION                              -->
+        <!-- ====================================================== -->
+        <section id="step2" class="step-content">
+          <div class="space-y-6">
+            <!-- Header -->
+            <div>
+              <h1 class="text-2xl md:text-3xl font-bold font-display tracking-tight text-navy-accent">Détails de l'offre
+              </h1>
+              <p class="mt-1.5 text-base text-gray-500">Décrivez le poste et collez l'offre pour que l'IA adapte votre
+                candidature.</p>
+            </div>
+            <!-- Two Column Layout -->
+            <div class="grid gap-6 lg:grid-cols-12">
+              <!-- Left Column -->
+              <div class="flex flex-col gap-5 lg:col-span-5">
+                <!-- Inputs Card -->
+                <div class="glass-panel rounded-2xl p-5 shadow-glass">
+                  <div class="flex flex-col gap-4">
+                    <label class="flex flex-col gap-1.5">
+                      <span class="text-xs font-semibold text-navy-accent">Titre du poste</span>
+                      <input type="text" id="jobTitle" placeholder="Ex: Développeur Full Stack Senior"
+                        class="form-input h-11 w-full rounded-xl border-0 bg-gray-50 px-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary" />
+                    </label>
+                    <label class="flex flex-col gap-1.5">
+                      <span class="text-xs font-semibold text-navy-accent">Nom de l'entreprise</span>
+                      <div class="relative">
+                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <span class="material-symbols-outlined text-gray-400 text-[18px]">business</span>
+                        </div>
+                        <input type="text" id="companyName" placeholder="Ex: Google, Microsoft..."
+                          class="form-input h-11 w-full rounded-xl border-0 bg-gray-50 pl-10 pr-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary" />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+                <!-- Profile Photo -->
+                <div id="profilePhotoSection" class="glass-panel rounded-2xl p-5 shadow-glass cursor-pointer">
+                  <h3 class="mb-3 text-xs font-semibold text-navy-accent">Photo de profil</h3>
+                  <div class="flex items-center gap-5">
+                    <div id="profilePhotoPreview"
+                      class="relative group size-20 shrink-0 overflow-hidden rounded-full ring-4 ring-white shadow-lg bg-gray-100 flex items-center justify-center text-gray-300">
+                      <span class="material-symbols-outlined text-3xl">person_add</span>
+                    </div>
+                    <input type="file" id="profilePhotoInput" accept="image/*" hidden />
+                    <div class="flex-1">
+                      <div
+                        class="flex w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-4 transition-colors hover:border-primary/50 hover:bg-primary/5">
+                        <div class="text-center">
+                          <div class="text-xs text-gray-500">
+                            <span class="font-semibold text-primary">Cliquez pour uploader</span> ou glissez-déposez
+                          </div>
+                          <p class="text-[10px] text-gray-400 mt-0.5">Optionnel — intégrée au CV généré</p>
+                        </div>
+                      </div>
+                      <button id="removeProfilePhoto"
+                        class="hidden mt-2 flex items-center gap-1 text-xs text-red-500 hover:text-red-600 font-medium">
+                        <span class="material-symbols-outlined text-sm">cancel</span> Supprimer
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h2>Offre d'emploi</h2>
-                <p class="card-subtitle">Décrivez le poste visé et collez l'offre d'emploi</p>
+              <!-- Right Column: Job Description -->
+              <div class="flex flex-col lg:col-span-7 h-full">
+                <div
+                  class="glass-panel relative flex flex-1 flex-col rounded-2xl p-5 shadow-glass h-full min-h-[320px]">
+                  <div class="mb-3 flex items-center justify-between">
+                    <label class="text-xs font-semibold text-navy-accent" for="jobDescription">Description de
+                      l'offre</label>
+                  </div>
+                  <textarea id="jobDescription" rows="10"
+                    class="flex-1 w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-navy-accent placeholder:text-gray-400 focus:ring-0"
+                    placeholder="Collez ici le texte complet de l'offre d'emploi. Plus il y a de détails, meilleure sera l'adaptation..."></textarea>
+                  <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                    <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
+                      <span class="material-symbols-outlined text-sm">info</span>
+                      <span>Plus de détails = meilleure adaptation</span>
+                    </div>
+                    <span id="jobDescCount" class="text-[11px] font-medium text-gray-400">0 caractères</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Template Selection: CV -->
+            <div class="mt-4">
+              <div class="mb-4">
+                <h2 class="text-lg font-bold text-navy-accent flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">dashboard</span>
+                  Modèle de CV
+                </h2>
+                <p class="text-xs text-gray-500 mt-0.5">Choisissez un style visuel pour votre CV.</p>
+              </div>
+              <div id="cvTemplateGrid" class="template-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div
+                  class="template-card selected group relative cursor-pointer rounded-2xl bg-white border-2 border-primary shadow-glass-hover overflow-hidden transition-all hover:shadow-lg"
+                  data-template="classic">
+                  <div
+                    class="template-preview template-preview-classic aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
+                    <div class="h-1.5 bg-primary rounded-full w-full"></div>
+                    <div class="h-1 bg-gray-300 rounded w-3/4 mt-1"></div>
+                    <div class="h-1 bg-gray-200 rounded w-full"></div>
+                    <div class="h-1 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Classique</h3>
+                    <p class="text-[10px] text-gray-400">Simple & professionnel</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="classic" data-type="cv" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="modern">
+                  <div class="template-preview template-preview-modern aspect-[3/4] bg-gray-50 p-3 flex gap-2">
+                    <div class="w-1/3 bg-navy-accent/80 rounded"></div>
+                    <div class="w-2/3 space-y-1.5 pt-2">
+                      <div class="h-1 bg-gray-300 rounded w-3/4"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Moderne</h3>
+                    <p class="text-[10px] text-gray-400">2 colonnes élégant</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="modern" data-type="cv" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="minimal">
+                  <div
+                    class="template-preview template-preview-minimal aspect-[3/4] bg-gray-50 p-3 flex flex-col items-center gap-1.5 pt-4">
+                    <div class="h-1 bg-gray-400 rounded w-1/2"></div>
+                    <div class="flex gap-1 mt-1">
+                      <div class="size-1.5 bg-primary rounded-full"></div>
+                      <div class="size-1.5 bg-primary rounded-full"></div>
+                      <div class="size-1.5 bg-primary rounded-full"></div>
+                    </div>
+                    <div class="h-1 bg-gray-200 rounded w-3/4 mt-1"></div>
+                    <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Minimaliste</h3>
+                    <p class="text-[10px] text-gray-400">Épuré & aéré</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="minimal" data-type="cv" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="executive">
+                  <div
+                    class="template-preview template-preview-executive aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
+                    <div class="h-5 bg-navy-accent/90 rounded w-full"></div>
+                    <div class="h-1 bg-gray-200 rounded w-full mt-1"></div>
+                    <div class="h-1 bg-gray-200 rounded w-3/4"></div>
+                    <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Exécutif</h3>
+                    <p class="text-[10px] text-gray-400">Sobre & haut de gamme</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="executive" data-type="cv" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="bold">
+                  <div class="template-preview template-preview-bold aspect-[3/4] bg-gray-50 p-3 flex gap-2">
+                    <div class="w-1/3 bg-gradient-to-b from-primary to-purple-400 rounded"></div>
+                    <div class="w-2/3 space-y-1.5 pt-2">
+                      <div class="h-1 bg-gray-300 rounded w-3/4"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Créatif</h3>
+                    <p class="text-[10px] text-gray-400">Coloré & impactant</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="bold" data-type="cv" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Template Selection: Letter -->
+            <div class="mt-4">
+              <div class="mb-4">
+                <h2 class="text-lg font-bold text-navy-accent flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary">edit_note</span>
+                  Modèle de Lettre
+                </h2>
+              </div>
+              <div id="letterTemplateGrid" class="template-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div
+                  class="template-card selected group relative cursor-pointer rounded-2xl bg-white border-2 border-primary shadow-glass-hover overflow-hidden transition-all hover:shadow-lg"
+                  data-template="formal">
+                  <div
+                    class="template-preview template-preview-formal aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5 pt-4">
+                    <div class="h-1 bg-gray-400 rounded w-1/3"></div>
+                    <div class="h-3"></div>
+                    <div class="h-1 bg-gray-200 rounded w-full"></div>
+                    <div class="h-1 bg-gray-200 rounded w-full"></div>
+                    <div class="h-1 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Formelle</h3>
+                    <p class="text-[10px] text-gray-400">Traditionnel & structuré</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="formal" data-type="letter" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="creative">
+                  <div
+                    class="template-preview template-preview-creative aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
+                    <div class="h-1.5 bg-primary rounded-full w-full"></div>
+                    <div class="h-1 bg-gray-300 rounded w-3/4 mt-1"></div>
+                    <div class="h-1 bg-gray-200 rounded w-full"></div>
+                    <div class="h-1 bg-gray-200 rounded w-full"></div>
+                    <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Créative</h3>
+                    <p class="text-[10px] text-gray-400">Moderne avec accents</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="creative" data-type="letter" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="elegant">
+                  <div
+                    class="template-preview template-preview-elegant aspect-[3/4] bg-gray-50 p-3 flex flex-col items-center gap-1.5 pt-4 relative">
+                    <div class="absolute inset-1 border border-gray-300 rounded pointer-events-none"></div>
+                    <div class="h-1 bg-gray-400 rounded w-1/2 relative z-10"></div>
+                    <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
+                    <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Élégante</h3>
+                    <p class="text-[10px] text-gray-400">Raffinée avec bordures</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="elegant" data-type="letter" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="flex items-center justify-between border-t border-gray-200 pt-6">
+              <button id="prevStep2"
+                class="group flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-white hover:text-navy-accent">
+                <span
+                  class="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
+                Retour
+              </button>
+              <button id="generateBtn"
+                class="flex items-center gap-2 rounded-xl bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark hover:shadow-primary/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed generate-glow"
+                disabled>
+                <span class="material-symbols-outlined text-lg">auto_awesome</span>
+                Adapter mon CV avec l'IA
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ====================================================== -->
+        <!-- STEP 3: RESULTS                                        -->
+        <!-- ====================================================== -->
+        <section id="step3" class="step-content">
+          <!-- Loading State -->
+          <div id="loadingState" class="hidden">
+            <div class="glass-panel rounded-2xl shadow-2xl overflow-hidden p-8 md:p-10 relative">
+              <div class="absolute inset-0 opacity-20 pointer-events-none">
+                <div
+                  class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent">
+                </div>
+              </div>
+              <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+                <!-- Left: Orb -->
+                <div class="flex flex-col items-center justify-center">
+                  <div class="relative w-52 h-52 md:w-64 md:h-64 flex items-center justify-center">
+                    <div
+                      class="absolute inset-0 rounded-full border border-primary/20 animate-[spin_10s_linear_infinite]">
+                    </div>
+                    <div
+                      class="absolute inset-4 rounded-full border border-dashed border-primary/30 animate-[spin_15s_linear_infinite_reverse]">
+                    </div>
+                    <div class="absolute inset-0 rounded-full bg-primary/5 animate-pulse"></div>
+                    <div
+                      class="absolute inset-0 rounded-full bg-primary/15 animate-[ping_3s_cubic-bezier(0,0,.2,1)_infinite]">
+                    </div>
+                    <div
+                      class="relative w-28 h-28 md:w-36 md:h-36 bg-gradient-to-tr from-primary to-purple-400 rounded-full flex items-center justify-center shadow-[0_0_50px_15px_rgba(107,91,230,0.3)] animate-float">
+                      <span class="material-symbols-outlined text-white text-5xl animate-pulse">neurology</span>
+                      <div class="absolute top-3 left-3 w-7 h-7 bg-white/30 rounded-full blur-md"></div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Right: Status -->
+                <div class="flex flex-col gap-5">
+                  <div>
+                    <h3 id="loadingTitle" class="text-2xl md:text-3xl font-black text-navy-accent tracking-tight mb-2">
+                      L'IA analyse votre CV et l'offre...</h3>
+                    <p id="loadingSubtitle" class="text-gray-500 text-base">Cela peut prendre quelques secondes</p>
+                  </div>
+                  <!-- Progress Bar -->
+                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                    <div id="loadingProgressBar"
+                      class="bg-primary h-1.5 rounded-full shadow-[0_0_10px_rgba(107,91,230,0.5)] transition-all duration-500"
+                      style="width:0%"></div>
+                  </div>
+                  <!-- Checklist -->
+                  <div class="space-y-3">
+                    <div id="loadingStep1"
+                      class="loading-step flex items-center gap-3 p-3 rounded-lg bg-white/30 border border-transparent transition-all">
+                      <div
+                        class="loading-step-icon flex-shrink-0 size-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <span class="material-symbols-outlined text-base">radio_button_unchecked</span>
+                      </div>
+                      <span class="text-sm font-medium text-gray-500">Analyse du CV et de l'offre</span>
+                    </div>
+                    <div id="loadingStep2"
+                      class="loading-step flex items-center gap-3 p-3 rounded-lg bg-white/30 border border-transparent transition-all">
+                      <div
+                        class="loading-step-icon flex-shrink-0 size-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <span class="material-symbols-outlined text-base">radio_button_unchecked</span>
+                      </div>
+                      <span class="text-sm font-medium text-gray-500">Adaptation du contenu</span>
+                    </div>
+                    <div id="loadingStep3"
+                      class="loading-step flex items-center gap-3 p-3 rounded-lg bg-white/30 border border-transparent transition-all">
+                      <div
+                        class="loading-step-icon flex-shrink-0 size-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <span class="material-symbols-outlined text-base">radio_button_unchecked</span>
+                      </div>
+                      <span class="text-sm font-medium text-gray-500">Lettre de motivation</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div class="card-body">
-            <!-- Profile Photo Upload -->
-            <div class="profile-photo-section" id="profilePhotoSection">
-              <div class="profile-photo-upload" id="profilePhotoUpload">
-                <div id="profilePhotoPreview" class="profile-photo-preview">
-                  <i data-lucide="user-plus"></i>
-                </div>
-                <input type="file" id="profilePhotoInput" accept="image/*" hidden />
+
+          <!-- Results -->
+          <div id="resultsState" class="hidden">
+            <!-- Header -->
+            <div class="text-center space-y-3 max-w-2xl mx-auto mb-8">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100/50 text-green-700 rounded-full text-xs font-semibold border border-green-200 backdrop-blur-sm">
+                <span class="material-symbols-outlined text-base">check_circle</span>
+                Analyse terminée
               </div>
-              <div class="profile-photo-info">
-                <strong>Photo de profil</strong>
-                <p>Optionnel — intégrée au CV généré</p>
-                <button id="removeProfilePhoto" class="btn-sm-link hidden">
-                  <i data-lucide="x-circle"></i>
-                  Supprimer
+              <h2 class="text-3xl md:text-4xl font-black text-navy-accent tracking-tight leading-[1.1]">
+                Votre dossier de candidature est prêt.
+              </h2>
+            </div>
+            <!-- Results Grid -->
+            <div class="results-grid grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+              <!-- CV Card -->
+              <div
+                class="group relative flex flex-col glass-panel rounded-2xl p-5 transition-all duration-300 hover:bg-white/85 hover:-translate-y-1 hover:shadow-glass-hover border-t-4 border-t-primary">
+                <div class="absolute -top-2.5 right-5">
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-navy-accent text-white text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg">
+                    <span class="material-symbols-outlined text-xs text-green-400">verified</span>
+                    Optimisé ATS
+                  </span>
+                </div>
+                <div class="flex items-center gap-3 mb-4">
+                  <div class="size-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
+                    <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-bold text-navy-accent">CV Adapté</h3>
+                  </div>
+                </div>
+                <div id="adaptedCVPreview"
+                  class="result-preview flex-1 bg-white/50 rounded-lg p-4 text-xs text-gray-600 max-h-64 overflow-auto border border-white/40 mb-4">
+                </div>
+                <button id="downloadCV"
+                  class="w-full flex items-center justify-center gap-2 h-11 bg-primary hover:bg-primary-light text-white font-semibold rounded-xl transition-all shadow-glow hover:shadow-lg hover:shadow-primary/40 active:scale-95">
+                  <span class="material-symbols-outlined">download</span>
+                  Télécharger le CV (PDF)
+                </button>
+              </div>
+              <!-- Cover Letter Card -->
+              <div
+                class="group relative flex flex-col glass-panel rounded-2xl p-5 transition-all duration-300 hover:bg-white/85 hover:-translate-y-1 hover:shadow-glass-hover border-t-4 border-t-purple-400">
+                <div class="absolute -top-2.5 right-5">
+                  <span
+                    class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white text-primary text-[10px] font-bold uppercase tracking-wider rounded-full shadow-md border border-primary/20">
+                    <span class="material-symbols-outlined text-xs">psychology</span>
+                    Personnalisée
+                  </span>
+                </div>
+                <div class="flex items-center gap-3 mb-4">
+                  <div class="size-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                    <span class="material-symbols-outlined text-2xl">mail</span>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-bold text-navy-accent">Lettre de Motivation</h3>
+                  </div>
+                </div>
+                <div id="coverLetterPreview"
+                  class="result-preview flex-1 bg-white/50 rounded-lg p-4 text-xs text-gray-600 max-h-64 overflow-auto border border-white/40 mb-4">
+                </div>
+                <button id="downloadCoverLetter"
+                  class="w-full flex items-center justify-center gap-2 h-11 bg-white hover:bg-gray-50 text-navy-accent font-semibold rounded-xl border border-gray-200 transition-all active:scale-95">
+                  <span class="material-symbols-outlined">download</span>
+                  Télécharger la Lettre (PDF)
                 </button>
               </div>
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="jobTitle">
-                  <i data-lucide="tag" class="label-icon"></i>
-                  Titre du poste
-                </label>
-                <input type="text" id="jobTitle" placeholder="Ex: Développeur Full Stack Senior" />
-              </div>
-              <div class="form-group">
-                <label for="companyName">
-                  <i data-lucide="building-2" class="label-icon"></i>
-                  Nom de l'entreprise
-                </label>
-                <input type="text" id="companyName" placeholder="Ex: Google, Microsoft..." />
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="jobDescription">
-                <i data-lucide="file-text" class="label-icon"></i>
-                Description de l'offre
-              </label>
-              <textarea id="jobDescription" rows="10"
-                placeholder="Collez ici le texte complet de l'offre d'emploi..."></textarea>
-              <span id="jobDescCount" class="char-count">0 caractères</span>
-            </div>
-
-            <!-- CV Template Selection -->
-            <div class="template-section">
-              <div class="template-section-header">
-                <i data-lucide="layout-template" class="label-icon"></i>
-                <span>Modèle de CV</span>
-              </div>
-              <div class="template-grid template-grid-cv" id="cvTemplateGrid">
-                <div class="template-card selected" data-template="classic">
-                  <div class="template-preview template-preview-classic">
-                    <div class="tp-bar"></div>
-                    <div class="tp-lines">
-                      <div class="tp-line tp-line-title"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line tp-line-short"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Classique</span>
-                  <span class="template-desc">Simple & professionnel</span>
-                  <button class="template-preview-btn" data-template="classic" data-type="cv" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-                <div class="template-card" data-template="modern">
-                  <div class="template-preview template-preview-modern">
-                    <div class="tp-sidebar"></div>
-                    <div class="tp-main">
-                      <div class="tp-line tp-line-title"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Moderne</span>
-                  <span class="template-desc">2 colonnes élégant</span>
-                  <button class="template-preview-btn" data-template="modern" data-type="cv" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-                <div class="template-card" data-template="minimal">
-                  <div class="template-preview template-preview-minimal">
-                    <div class="tp-lines">
-                      <div class="tp-line tp-line-center tp-line-title"></div>
-                      <div class="tp-dot-row">
-                        <div class="tp-dot"></div>
-                        <div class="tp-dot"></div>
-                        <div class="tp-dot"></div>
-                      </div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line tp-line-short"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Minimaliste</span>
-                  <span class="template-desc">Épuré & aéré</span>
-                  <button class="template-preview-btn" data-template="minimal" data-type="cv" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-                <div class="template-card" data-template="executive">
-                  <div class="template-preview template-preview-executive">
-                    <div class="tp-header-band"></div>
-                    <div class="tp-lines">
-                      <div class="tp-line"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line tp-line-short"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Exécutif</span>
-                  <span class="template-desc">Sobre & haut de gamme</span>
-                  <button class="template-preview-btn" data-template="executive" data-type="cv" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-                <div class="template-card" data-template="bold">
-                  <div class="template-preview template-preview-bold">
-                    <div class="tp-bold-sidebar"></div>
-                    <div class="tp-main">
-                      <div class="tp-line tp-line-title"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line tp-line-short"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Créatif</span>
-                  <span class="template-desc">Coloré & impactant</span>
-                  <button class="template-preview-btn" data-template="bold" data-type="cv" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Cover Letter Template Selection -->
-            <div class="template-section">
-              <div class="template-section-header">
-                <i data-lucide="pen-tool" class="label-icon"></i>
-                <span>Modèle de Lettre</span>
-              </div>
-              <div class="template-grid template-grid-3" id="letterTemplateGrid">
-                <div class="template-card selected" data-template="formal">
-                  <div class="template-preview template-preview-formal">
-                    <div class="tp-lines">
-                      <div class="tp-line tp-line-short"></div>
-                      <div class="tp-spacer"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line tp-line-short"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Formelle</span>
-                  <span class="template-desc">Traditionnel & structuré</span>
-                  <button class="template-preview-btn" data-template="formal" data-type="letter" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-                <div class="template-card" data-template="creative">
-                  <div class="template-preview template-preview-creative">
-                    <div class="tp-accent-bar"></div>
-                    <div class="tp-lines">
-                      <div class="tp-line tp-line-title"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line tp-line-short"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Créative</span>
-                  <span class="template-desc">Moderne avec accents</span>
-                  <button class="template-preview-btn" data-template="creative" data-type="letter" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-                <div class="template-card" data-template="elegant">
-                  <div class="template-preview template-preview-elegant">
-                    <div class="tp-border-frame"></div>
-                    <div class="tp-lines">
-                      <div class="tp-line tp-line-center tp-line-title"></div>
-                      <div class="tp-line"></div>
-                      <div class="tp-line"></div>
-                    </div>
-                  </div>
-                  <span class="template-name">Élégante</span>
-                  <span class="template-desc">Raffinée avec bordures</span>
-                  <button class="template-preview-btn" data-template="elegant" data-type="letter" title="Aperçu"><i
-                      data-lucide="eye"></i></button>
-                </div>
-              </div>
-            </div>
           </div>
-          <div class="card-footer card-footer-between">
-            <button id="prevStep2" class="btn btn-ghost">
-              <i data-lucide="arrow-left"></i>
-              Retour
-            </button>
-            <button id="generateBtn" class="btn btn-primary btn-glow" disabled>
-              <i data-lucide="wand-2"></i>
-              Adapter mon CV avec l'IA
+
+          <!-- New Adaptation Button -->
+          <div id="newAdaptation" class="hidden mt-6 flex justify-center">
+            <button id="startOverBtn"
+              class="text-gray-500 hover:text-primary text-sm font-medium flex items-center gap-2 transition-colors">
+              <span class="material-symbols-outlined text-lg">refresh</span>
+              Nouvelle adaptation
             </button>
           </div>
-        </div>
-      </section>
-
-      <!-- Step 3: Results -->
-      <section id="step3" class="step-content">
-        <!-- Loading State -->
-        <div id="loadingState" class="card glass-card loading-card hidden">
-          <div class="loading-content">
-            <div class="loading-orb">
-              <div class="orb-ring orb-ring-1"></div>
-              <div class="orb-ring orb-ring-2"></div>
-              <div class="orb-ring orb-ring-3"></div>
-              <div class="orb-core">🤖</div>
-            </div>
-            <h3 id="loadingTitle">L'IA analyse votre CV et l'offre...</h3>
-            <p id="loadingSubtitle" class="loading-subtitle">Cela peut prendre quelques secondes</p>
-            <div class="loading-progress">
-              <div id="loadingProgressBar" class="loading-progress-bar"></div>
-            </div>
-            <div class="loading-steps">
-              <div id="loadingStep1" class="loading-step">
-                <div class="loading-step-icon">
-                  <i data-lucide="scan-search"></i>
-                </div>
-                <span>Analyse du CV et de l'offre</span>
-              </div>
-              <div id="loadingStep2" class="loading-step">
-                <div class="loading-step-icon">
-                  <i data-lucide="pencil-ruler"></i>
-                </div>
-                <span>Adaptation du contenu</span>
-              </div>
-              <div id="loadingStep3" class="loading-step">
-                <div class="loading-step-icon">
-                  <i data-lucide="mail"></i>
-                </div>
-                <span>Lettre de motivation</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Results -->
-        <div id="resultsState" class="results-grid hidden">
-          <!-- Adapted CV -->
-          <div class="card glass-card result-card animate-in">
-            <div class="card-header">
-              <div class="result-title">
-                <div class="result-icon-wrapper">
-                  <i data-lucide="file-check-2"></i>
-                </div>
-                <h2>CV Adapté</h2>
-              </div>
-              <span class="badge badge-success">
-                <i data-lucide="sparkles"></i>
-                Optimisé ATS
-              </span>
-            </div>
-            <div class="card-body">
-              <div id="adaptedCVPreview" class="result-preview"></div>
-            </div>
-            <div class="card-footer">
-              <button id="downloadCV" class="btn btn-primary btn-full">
-                <i data-lucide="download"></i>
-                Télécharger le CV (PDF)
-              </button>
-            </div>
-          </div>
-
-          <!-- Cover Letter -->
-          <div class="card glass-card result-card animate-in" style="animation-delay: 0.15s">
-            <div class="card-header">
-              <div class="result-title">
-                <div class="result-icon-wrapper accent-cyan">
-                  <i data-lucide="mail-check"></i>
-                </div>
-                <h2>Lettre de Motivation</h2>
-              </div>
-              <span class="badge badge-info">
-                <i data-lucide="target"></i>
-                Personnalisée
-              </span>
-            </div>
-            <div class="card-body">
-              <div id="coverLetterPreview" class="result-preview"></div>
-            </div>
-            <div class="card-footer">
-              <button id="downloadCoverLetter" class="btn btn-secondary btn-full">
-                <i data-lucide="download"></i>
-                Télécharger la Lettre (PDF)
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- New Adaptation Button -->
-        <div id="newAdaptation" class="new-adaptation hidden">
-          <button id="startOverBtn" class="btn btn-ghost">
-            <i data-lucide="refresh-cw"></i>
-            Nouvelle adaptation
-          </button>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
-      <div class="footer-inner">
-        <p>
-          <span class="footer-logo">AdaptaCV</span>
-          <span class="footer-sep">•</span>
-          <span class="footer-privacy">
-            <i data-lucide="shield-check" class="footer-icon"></i>
-            Aucune donnée stockée
-          </span>
-        </p>
-      </div>
+    <footer class="relative z-10 text-center py-5 text-xs text-gray-400">
+      <span class="font-semibold">AdaptaCV</span>
+      <span class="mx-1.5">•</span>
+      <span class="inline-flex items-center gap-1">
+        <span class="material-symbols-outlined text-xs">shield</span>
+        Aucune donnée stockée
+      </span>
     </footer>
 
     <!-- Template Preview Modal -->
     <div id="templatePreviewModal" class="modal-overlay hidden">
-      <div class="modal modal-preview">
-        <div class="modal-header">
-          <div class="modal-title">
-            <i data-lucide="eye" class="modal-title-icon"></i>
-            <h2 id="previewModalTitle">Aperçu du modèle</h2>
+      <div class="glass-panel w-[90%] max-w-lg rounded-2xl shadow-2xl">
+        <div class="flex items-center justify-between p-5 pb-0">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-xl">visibility</span>
+            <h2 id="previewModalTitle" class="font-display text-lg font-bold">Aperçu du modèle</h2>
           </div>
-          <button id="closePreviewBtn" class="btn-icon">
-            <i data-lucide="x"></i>
+          <button id="closePreviewBtn"
+            class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+            <span class="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
-        <div class="modal-body modal-preview-body">
-          <div id="templatePreviewContent" class="template-preview-full"></div>
+        <div class="p-5">
+          <div id="templatePreviewContent" class="template-preview-full rounded-lg overflow-hidden"></div>
         </div>
-        <div class="modal-footer">
-          <button id="previewSelectBtn" class="btn btn-primary">
-            <i data-lucide="check"></i>
+        <div class="p-5 pt-0">
+          <button id="previewSelectBtn"
+            class="w-full flex items-center justify-center gap-2 h-10 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-95">
+            <span class="material-symbols-outlined text-lg">check</span>
             Sélectionner ce modèle
           </button>
         </div>
@@ -603,21 +859,13 @@
     </div>
 
     <!-- Toast Notifications -->
-    <div id="toastContainer" class="toast-container"></div>
+    <div id="toastContainer" class="toast-container fixed bottom-6 right-6 z-[300] space-y-2"></div>
 
     <!-- Confetti Canvas -->
-    <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
+    <canvas id="confettiCanvas" class="fixed inset-0 z-[400] pointer-events-none"></canvas>
   </div>
 
   <script type="module" src="/src/main.js"></script>
-  <script>
-    // Initialize Lucide icons after page load
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-    });
-  </script>
 </body>
 
 </html>
