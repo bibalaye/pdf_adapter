@@ -84,7 +84,8 @@
             title="Historique des CVs">
             <span class="material-symbols-outlined text-[18px]">history</span>
             <span class="hidden sm:inline">Historique</span>
-            <span id="historyBadge" class="hidden size-4 bg-primary rounded-full text-white text-[9px] flex items-center justify-center font-bold">0</span>
+            <span id="historyBadge"
+              class="hidden size-4 bg-primary rounded-full text-white text-[9px] flex items-center justify-center font-bold">0</span>
           </button>
           <button id="settingsBtn"
             class="flex size-9 items-center justify-center rounded-lg border border-black/8 bg-white text-gray-500 hover:bg-primary/5 hover:text-primary transition-all"
@@ -185,7 +186,9 @@
             <h2 class="font-display text-lg font-bold">Historique des adaptations</h2>
           </div>
           <div class="flex items-center gap-2">
-            <button id="clearHistoryBtn" class="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Tout effacer</button>
+            <button id="clearHistoryBtn"
+              class="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Tout
+              effacer</button>
             <button id="closeHistoryBtn"
               class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
               <span class="material-symbols-outlined text-xl">close</span>
@@ -622,99 +625,188 @@
                     <span class="material-symbols-outlined text-sm">zoom_in</span>
                   </button>
                 </div>
-              </div>
-            </div>
-
-            <!-- Template Selection: Letter -->
-            <div class="mt-4">
-              <div class="mb-4">
-                <h2 class="text-lg font-bold text-navy-accent flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary">edit_note</span>
-                  Modèle de Lettre
-                </h2>
-              </div>
-              <div id="letterTemplateGrid" class="template-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div
-                  class="template-card selected group relative cursor-pointer rounded-2xl bg-white border-2 border-primary shadow-glass-hover overflow-hidden transition-all hover:shadow-lg"
-                  data-template="formal">
-                  <div
-                    class="template-preview template-preview-formal aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5 pt-4">
-                    <div class="h-1 bg-gray-400 rounded w-1/3"></div>
-                    <div class="h-3"></div>
-                    <div class="h-1 bg-gray-200 rounded w-full"></div>
-                    <div class="h-1 bg-gray-200 rounded w-full"></div>
-                    <div class="h-1 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Formelle</h3>
-                    <p class="text-[10px] text-gray-400">Traditionnel & structuré</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="formal" data-type="letter" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
+                <!-- AltaCV Template Card -->
                 <div
                   class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="creative">
-                  <div
-                    class="template-preview template-preview-creative aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
-                    <div class="h-1.5 bg-primary rounded-full w-full"></div>
-                    <div class="h-1 bg-gray-300 rounded w-3/4 mt-1"></div>
-                    <div class="h-1 bg-gray-200 rounded w-full"></div>
-                    <div class="h-1 bg-gray-200 rounded w-full"></div>
-                    <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                  data-template="altacv">
+                  <div class="template-preview aspect-[3/4] bg-blue-50 p-3 flex gap-2">
+                    <div class="w-2/3 space-y-1.5 pt-2">
+                      <div class="h-2 bg-blue-500 rounded w-3/4"></div>
+                      <div class="h-1 bg-gray-300 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-2/3"></div>
+                      <div class="mt-1 h-1 bg-blue-300 rounded w-1/2"></div>
+                      <div class="h-1 bg-gray-100 rounded w-full"></div>
+                    </div>
+                    <div class="w-1/3 bg-blue-100 rounded flex flex-col gap-1 p-1 pt-2">
+                      <div class="h-1 bg-blue-400 rounded w-full"></div>
+                      <div class="h-1 bg-blue-200 rounded w-3/4"></div>
+                      <div class="h-1 bg-blue-200 rounded w-1/2"></div>
+                    </div>
                   </div>
                   <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Créative</h3>
-                    <p class="text-[10px] text-gray-400">Moderne avec accents</p>
+                    <h3 class="font-bold text-xs text-navy-accent flex items-center gap-1">
+                      AltaCV
+                      <span class="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-semibold">CTAN</span>
+                    </h3>
+                    <p class="text-[10px] text-gray-400">2 colonnes &bull; LuaLaTeX</p>
                   </div>
                   <button
                     class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="creative" data-type="letter" title="Aperçu">
+                    data-template="altacv" data-type="cv" title="Aperçu AltaCV">
                     <span class="material-symbols-outlined text-sm">zoom_in</span>
                   </button>
-                </div>
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="elegant">
+                  <!-- MaltaCV Template Card -->
                   <div
-                    class="template-preview template-preview-elegant aspect-[3/4] bg-gray-50 p-3 flex flex-col items-center gap-1.5 pt-4 relative">
-                    <div class="absolute inset-1 border border-gray-300 rounded pointer-events-none"></div>
-                    <div class="h-1 bg-gray-400 rounded w-1/2 relative z-10"></div>
-                    <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
-                    <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
+                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                    data-template="maltacv">
+                    <div class="template-preview aspect-[3/4] bg-orange-50 p-3 flex flex-col gap-2">
+                      <div class="h-2 bg-orange-600 rounded w-1/2"></div>
+                      <div class="h-1 bg-gray-300 rounded w-full"></div>
+                      <div class="h-4 bg-orange-100 rounded w-full mt-1"></div>
+                      <div class="grid grid-cols-2 gap-2 mt-1">
+                        <div class="h-10 bg-gray-200 rounded"></div>
+                        <div class="h-10 bg-gray-200 rounded"></div>
+                      </div>
+                      <div class="h-12 bg-gray-100 rounded w-full mt-1"></div>
+                    </div>
+                    <div class="p-3">
+                      <h3 class="font-bold text-xs text-navy-accent flex items-center gap-1">
+                        MaltaCV
+                        <span
+                          class="text-[9px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-semibold">NEW</span>
+                      </h3>
+                      <p class="text-[10px] text-gray-400">Colorful & Multicol &bull; LuaLaTeX</p>
+                    </div>
+                    <button
+                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                      data-template="maltacv" data-type="cv" title="Aperçu MaltaCV">
+                      <span class="material-symbols-outlined text-sm">zoom_in</span>
+                    </button>
                   </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Élégante</h3>
-                    <p class="text-[10px] text-gray-400">Raffinée avec bordures</p>
+                  <!-- MyCV Template Card -->
+                  <div
+                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                    data-template="mycv">
+                    <div class="template-preview aspect-[3/4] bg-sky-50 p-3 flex flex-col gap-2">
+                      <div class="h-4 bg-sky-600 rounded w-3/4"></div>
+                      <div class="h-1 bg-gray-300 rounded w-full"></div>
+                      <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div class="space-y-2">
+                          <div class="h-12 bg-gray-100 rounded"></div>
+                          <div class="h-12 bg-gray-100 rounded"></div>
+                        </div>
+                        <div class="space-y-2">
+                          <div class="h-8 bg-sky-100 rounded"></div>
+                          <div class="h-8 bg-gray-100 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="p-3">
+                      <h3 class="font-bold text-xs text-navy-accent flex items-center gap-1">
+                        MyCV
+                        <span class="text-[9px] bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded font-semibold">ACADEMIC</span>
+                      </h3>
+                      <p class="text-[10px] text-gray-400">Clean & Multicol &bull; pdfLaTeX</p>
+                    </div>
+                    <button
+                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                      data-template="mycv" data-type="cv" title="Aperçu MyCV">
+                      <span class="material-symbols-outlined text-sm">zoom_in</span>
+                    </button>
                   </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="elegant" data-type="letter" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
                 </div>
               </div>
-            </div>
 
-            <!-- Footer Actions -->
-            <div class="flex items-center justify-between border-t border-gray-200 pt-6">
-              <button id="prevStep2"
-                class="group flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-white hover:text-navy-accent">
-                <span
-                  class="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
-                Retour
-              </button>
-              <button id="generateBtn"
-                class="flex items-center gap-2 rounded-xl bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark hover:shadow-primary/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed generate-glow"
-                disabled>
-                <span class="material-symbols-outlined text-lg">auto_awesome</span>
-                Adapter mon CV avec l'IA
-              </button>
+              <!-- Template Selection: Letter -->
+              <div class="mt-4">
+                <div class="mb-4">
+                  <h2 class="text-lg font-bold text-navy-accent flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">edit_note</span>
+                    Modèle de Lettre
+                  </h2>
+                </div>
+                <div id="letterTemplateGrid" class="template-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div
+                    class="template-card selected group relative cursor-pointer rounded-2xl bg-white border-2 border-primary shadow-glass-hover overflow-hidden transition-all hover:shadow-lg"
+                    data-template="formal">
+                    <div
+                      class="template-preview template-preview-formal aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5 pt-4">
+                      <div class="h-1 bg-gray-400 rounded w-1/3"></div>
+                      <div class="h-3"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-2/3"></div>
+                    </div>
+                    <div class="p-3">
+                      <h3 class="font-bold text-xs text-navy-accent">Formelle</h3>
+                      <p class="text-[10px] text-gray-400">Traditionnel & structuré</p>
+                    </div>
+                    <button
+                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                      data-template="formal" data-type="letter" title="Aperçu">
+                      <span class="material-symbols-outlined text-sm">zoom_in</span>
+                    </button>
+                  </div>
+                  <div
+                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                    data-template="creative">
+                    <div
+                      class="template-preview template-preview-creative aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
+                      <div class="h-1.5 bg-primary rounded-full w-full"></div>
+                      <div class="h-1 bg-gray-300 rounded w-3/4 mt-1"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                    <div class="p-3">
+                      <h3 class="font-bold text-xs text-navy-accent">Créative</h3>
+                      <p class="text-[10px] text-gray-400">Moderne avec accents</p>
+                    </div>
+                    <button
+                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                      data-template="creative" data-type="letter" title="Aperçu">
+                      <span class="material-symbols-outlined text-sm">zoom_in</span>
+                    </button>
+                  </div>
+                  <div
+                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                    data-template="elegant">
+                    <div
+                      class="template-preview template-preview-elegant aspect-[3/4] bg-gray-50 p-3 flex flex-col items-center gap-1.5 pt-4 relative">
+                      <div class="absolute inset-1 border border-gray-300 rounded pointer-events-none"></div>
+                      <div class="h-1 bg-gray-400 rounded w-1/2 relative z-10"></div>
+                      <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
+                      <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
+                    </div>
+                    <div class="p-3">
+                      <h3 class="font-bold text-xs text-navy-accent">Élégante</h3>
+                      <p class="text-[10px] text-gray-400">Raffinée avec bordures</p>
+                    </div>
+                    <button
+                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                      data-template="elegant" data-type="letter" title="Aperçu">
+                      <span class="material-symbols-outlined text-sm">zoom_in</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer Actions -->
+              <div class="flex items-center justify-between border-t border-gray-200 pt-6">
+                <button id="prevStep2"
+                  class="group flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-white hover:text-navy-accent">
+                  <span
+                    class="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
+                  Retour
+                </button>
+                <button id="generateBtn"
+                  class="flex items-center gap-2 rounded-xl bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark hover:shadow-primary/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed generate-glow"
+                  disabled>
+                  <span class="material-symbols-outlined text-lg">auto_awesome</span>
+                  Adapter mon CV avec l'IA
+                </button>
+              </div>
             </div>
-          </div>
         </section>
 
         <!-- ====================================================== -->
@@ -834,13 +926,17 @@
                 <div class="flex flex-col gap-2 mt-auto">
                   <!-- Template Switcher for CV -->
                   <div class="flex items-center gap-1.5 flex-wrap mb-1" id="resultCVTemplateSwitcher">
-                    <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider w-full mb-0.5">Modèle :</span>
+                    <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider w-full mb-0.5">Modèle
+                      :</span>
                     <button class="result-tpl-btn active" data-tpl="classic">Classique</button>
                     <button class="result-tpl-btn" data-tpl="modern">Moderne</button>
                     <button class="result-tpl-btn" data-tpl="minimal">Minimal</button>
                     <button class="result-tpl-btn" data-tpl="executive">Exécutif</button>
                     <button class="result-tpl-btn" data-tpl="bold">Créatif</button>
                     <button class="result-tpl-btn" data-tpl="twentysecond">Créatif 2</button>
+                    <button class="result-tpl-btn" data-tpl="altacv">AltaCV · LuaLaTeX</button>
+                    <button class="result-tpl-btn" data-tpl="maltacv">MaltaCV · LuaLaTeX</button>
+                    <button class="result-tpl-btn" data-tpl="mycv">MyCV · pdfLaTeX</button>
                   </div>
                   <button id="previewCVCode"
                     class="w-full flex items-center justify-center gap-2 h-10 bg-white hover:bg-gray-50 text-primary font-semibold rounded-xl border border-primary/20 transition-all active:scale-95">
@@ -960,18 +1056,21 @@
           </div>
         </div>
         <div class="flex-1 overflow-hidden relative bg-gray-100">
-          <div id="latexLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10 transition-opacity">
+          <div id="latexLoading"
+            class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10 transition-opacity">
             <span class="material-symbols-outlined text-4xl text-primary animate-spin mb-3">refresh</span>
             <p class="text-gray-500 font-medium">Compilation LaTeX en cours...</p>
             <p class="text-xs text-gray-400 mt-2">Cela peut prendre quelques secondes.</p>
           </div>
-          <form id="latexForm" action="https://texlive.net/cgi-bin/latexcgi" method="POST" enctype="multipart/form-data" target="latexIframe" class="hidden">
+          <form id="latexForm" action="https://texlive.net/cgi-bin/latexcgi" method="POST" enctype="multipart/form-data"
+            target="latexIframe" class="hidden">
             <textarea name="filecontents[]" id="latexInput"></textarea>
             <input type="hidden" name="filename[]" value="document.tex">
             <input type="hidden" name="engine" value="pdflatex">
             <input type="hidden" name="return" value="pdf">
           </form>
-          <iframe name="latexIframe" id="latexIframe" class="w-full h-full border-0 relative z-20" onload="document.getElementById('latexLoading').style.opacity = '0'; pointerEvents = 'none';"></iframe>
+          <iframe name="latexIframe" id="latexIframe" class="w-full h-full border-0 relative z-20"
+            onload="document.getElementById('latexLoading').style.opacity = '0'; pointerEvents = 'none';"></iframe>
         </div>
       </div>
     </div>

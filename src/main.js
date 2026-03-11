@@ -16,6 +16,7 @@ import {
   generateAdaptedCVPDF,
   generateCoverLetterPDF,
   downloadPDF,
+  getEngineForTemplate,
 } from './pdf-generator.js';
 import { showToast } from './toast.js';
 
@@ -887,19 +888,68 @@ function handleDownloadCoverLetter() {
   }
 }
 
-function handlePreviewCVCode() {
+async function handlePreviewCVCode() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
     const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
+
+    // Set engine
+    const engineInput = latexForm.querySelector('input[name="engine"]');
+    if (engineInput) engineInput.value = getEngineForTemplate(state.cvTemplate);
+
+    // Clean up any previously injected companion files
+    latexForm.querySelectorAll('.aux-file-field').forEach(el => el.remove());
+
+    if (['altacv', 'maltacv', 'mycv'].includes(state.cvTemplate)) {
+      const clsFile = state.cvTemplate === 'mycv' ? 'my_cv.cls' : state.cvTemplate + '.cls';
+      showToast(`Chargement de ${clsFile}...`, 'info', 3000);
+      try {
+        const clsResp = await fetch('/' + clsFile);
+        if (!clsResp.ok) throw new Error(`HTTP ${clsResp.status}`);
+        const clsText = await clsResp.text();
+
+        // Inject cls BEFORE the main textarea so TeXLive.net sees it first
+        const clsNameInput = document.createElement('input');
+        clsNameInput.type = 'hidden';
+        clsNameInput.name = 'filename[]';
+        clsNameInput.className = 'aux-file-field';
+        clsNameInput.value = clsFile;
+
+        const clsContentArea = document.createElement('textarea');
+        clsContentArea.name = 'filecontents[]';
+        clsContentArea.className = 'aux-file-field';
+        clsContentArea.style.display = 'none';
+        clsContentArea.value = clsText;
+
+        // Insert the cls fields at the TOP of the form, before the main document textarea
+        latexForm.insertBefore(clsContentArea, latexInput);
+        latexForm.insertBefore(clsNameInput, clsContentArea);
+
+      } catch (fetchErr) {
+        console.warn(`Could not fetch ${clsFile}:`, fetchErr);
+        showToast(`${clsFile} introuvable — vérifiez le dossier /public.`, 'error', 5000);
+      }
+    }
+
+    // Set the main document content
     latexInput.value = tex;
-    latexIframe.src = 'about:blank'; // Clear previous
+
+    latexIframe.src = 'about:blank';
     latexLoading.style.opacity = '1';
+
+    // Update loading message for lualatex templates (slower)
+    const engine = getEngineForTemplate(state.cvTemplate);
+    const loadingMsg = document.querySelector('#latexLoading p');
+    if (loadingMsg) {
+      loadingMsg.textContent = engine === 'lualatex'
+        ? 'Compilation LuaLaTeX en cours (30-60s)...'
+        : 'Compilation LaTeX en cours...';
+    }
+
     latexCodeModal.classList.remove('hidden');
-    // Give modal time to show loading before submitting form
-    setTimeout(() => {
-        latexForm.submit();
-    }, 100);
+    setTimeout(() => latexForm.submit(), 200);
+
   } catch (err) {
     console.error('Preview error:', err);
     showToast('Erreur lors de la génération de l\'aperçu.', 'error');
@@ -998,7 +1048,7 @@ let previewedType = null;
 
 const TEMPLATE_NAMES = {
   classic: 'Classique', modern: 'Moderne', minimal: 'Minimaliste',
-  executive: 'Exécutif', bold: 'Créatif', twentysecond: 'Créatif 2',
+  executive: 'Exécutif', bold: 'Créatif', twentysecond: 'Créatif 2', altacv: 'AltaCV',
   formal: 'Formelle', creative: 'Créative', elegant: 'Élégante',
 };
 
