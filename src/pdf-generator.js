@@ -1,1375 +1,28 @@
 /**
- * PDF Generator — Multiple templates for CV and cover letter
- * Uses jsPDF — Templates: classic, modern, minimal, formal, creative
+ * LaTeX Source Generator - Standard TeX Live compatible
  */
-import { jsPDF } from 'jspdf';
+import { saveAs } from 'file-saver';
 
-const PAGE_W = 210;
-const PAGE_H = 297;
-
-// ============================================================
-// Shared helpers
-// ============================================================
-
-function addInvisibleATSKeywords(doc, keywords) {
-    if (!keywords || keywords.length === 0) return;
-    // White text on white background — invisible to humans, readable by ATS
-    doc.setFontSize(1);
-    doc.setTextColor(255, 255, 255);
-    const kwText = keywords.join(', ');
-    const lines = doc.splitTextToSize(kwText, PAGE_W - 20);
-    let y = PAGE_H - 3;
-    for (const line of lines) {
-        doc.text(line, 10, y);
-        y -= 1;
-        if (y < PAGE_H - 10) break;
-    }
+// Escape LaTeX special characters
+function escapeLatex(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/\\/g, '\\textbackslash{}')
+        .replace(/\{/g, '\\{')
+        .replace(/\}/g, '\\}')
+        .replace(/\$/g, '\\$')
+        .replace(/&/g, '\\&')
+        .replace(/#/g, '\\#')
+        .replace(/\^/g, '\\textasciicircum{}')
+        .replace(/_/g, '\\_')
+        .replace(/~/g, '\\textasciitilde{}')
+        .replace(/%/g, '\\%');
 }
 
-// ============================================================
-// CV TEMPLATE: CLASSIC
-// ============================================================
-function generateClassicCV(doc, cvData, name, photoDataURL) {
-    const margin = 22;
-    const contentW = PAGE_W - 2 * margin;
-    let y = margin;
-
-    const C = {
-        primary: [45, 55, 120],
-        accent: [67, 56, 202],
-        text: [35, 35, 50],
-        secondary: [90, 90, 115],
-        muted: [140, 140, 160],
-        line: [210, 210, 225],
-    };
-
-    // Top accent bar
-    doc.setFillColor(...C.accent);
-    doc.rect(0, 0, PAGE_W, 4, 'F');
-
-    // Photo (if provided, top-left)
-    if (photoDataURL) {
-        try {
-            const photoS = 28;
-            doc.addImage(photoDataURL, 'JPEG', margin, y, photoS, photoS);
-            doc.setDrawColor(...C.accent);
-            doc.setLineWidth(0.8);
-            doc.circle(margin + photoS / 2, y + photoS / 2, photoS / 2 + 0.5, 'S');
-
-            // Name to the right of photo
-            doc.setFontSize(22);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.primary);
-            doc.text(name, margin + photoS + 8, y + 10);
-
-            if (cvData.personalInfo?.title) {
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...C.accent);
-                doc.text(cvData.personalInfo.title, margin + photoS + 8, y + 18);
-            }
-            y += photoS + 6;
-        } catch (e) {
-            console.warn('Photo error:', e);
-            y = renderClassicHeader(doc, name, cvData, margin, y, C);
-        }
-    } else {
-        y = renderClassicHeader(doc, name, cvData, margin, y, C);
-    }
-
-    // Contact line
-    const pi = cvData.personalInfo || {};
-    const contacts = [pi.email, pi.phone, pi.location, pi.linkedin].filter(Boolean);
-    if (contacts.length) {
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.secondary);
-        doc.text(contacts.join('  •  '), margin, y);
-        y += 6;
-    }
-
-    // Divider
-    doc.setDrawColor(...C.accent);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, margin + contentW, y);
-    y += 8;
-
-    function sectionTitle(title) {
-        checkPage(16);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.accent);
-        doc.text(title.toUpperCase(), margin, y);
-        y += 2;
-        doc.setDrawColor(...C.accent);
-        doc.setLineWidth(0.4);
-        doc.line(margin, y, margin + 30, y);
-        doc.setDrawColor(...C.line);
-        doc.setLineWidth(0.1);
-        doc.line(margin + 31, y, margin + contentW, y);
-        y += 6;
-    }
-
-    function checkPage(need = 15) {
-        if (y + need > PAGE_H - 15) {
-            doc.addPage();
-            y = margin;
-        }
-    }
-
-    // Summary
-    if (cvData.summary) {
-        sectionTitle('Profil');
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(...C.secondary);
-        const lines = doc.splitTextToSize(cvData.summary, contentW);
-        for (const l of lines) { checkPage(4.5); doc.text(l, margin, y); y += 4.2; }
-        y += 4;
-    }
-
-    // Skills
-    if (cvData.keySkills?.length) {
-        sectionTitle('Compétences');
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.text);
-        const skillText = cvData.keySkills.join('  •  ');
-        const lines = doc.splitTextToSize(skillText, contentW);
-        for (const l of lines) { checkPage(4); doc.text(l, margin, y); y += 4; }
-        y += 4;
-    }
-
-    // Experience
-    if (cvData.experience?.length) {
-        sectionTitle('Expérience Professionnelle');
-        for (const exp of cvData.experience) {
-            checkPage(18);
-            doc.setFontSize(10.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.text);
-            doc.text(exp.title || '', margin, y);
-            y += 4.5;
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...C.accent);
-            doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), margin, y);
-            y += 4.5;
-            if (exp.description) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(...C.secondary);
-                const dl = doc.splitTextToSize(exp.description, contentW - 4);
-                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
-                y += 1.5;
-            }
-            if (exp.bullets?.length) {
-                for (const b of exp.bullets) {
-                    checkPage(5);
-                    doc.setFillColor(...C.accent);
-                    doc.circle(margin + 1.5, y - 1, 0.5, 'F');
-                    doc.setFontSize(8.5);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(...C.text);
-                    const bl = doc.splitTextToSize(b, contentW - 6);
-                    for (let i = 0; i < bl.length; i++) { if (i > 0) checkPage(4); doc.text(bl[i], margin + 5, y); y += 3.8; }
-                    y += 0.8;
-                }
-            }
-            y += 4;
-        }
-    }
-
-    // Education
-    if (cvData.education?.length) {
-        sectionTitle('Formation');
-        for (const edu of cvData.education) {
-            checkPage(12);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.text);
-            doc.text(edu.degree || '', margin, y);
-            y += 4.5;
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...C.accent);
-            doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), margin, y);
-            y += 4;
-            if (edu.description) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(...C.secondary);
-                const dl = doc.splitTextToSize(edu.description, contentW - 4);
-                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
-            }
-            y += 3;
-        }
-    }
-
-    // Projects
-    if (cvData.projects?.length) {
-        sectionTitle('Projets');
-        for (const proj of cvData.projects) {
-            checkPage(12);
-            doc.setFontSize(9.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.text);
-            doc.text(proj.name || '', margin, y);
-            if (proj.link) { doc.setFontSize(7); doc.setTextColor(...C.accent); doc.text(proj.link, margin + doc.getTextWidth(proj.name + '  '), y); }
-            y += 4;
-            if (proj.description) {
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...C.secondary);
-                const pl = doc.splitTextToSize(proj.description, contentW - 4);
-                for (const p of pl) { checkPage(4); doc.text(p, margin + 2, y); y += 3.8; }
-            }
-            y += 3;
-        }
-    }
-
-    // Certifications
-    if (cvData.certifications?.length) {
-        sectionTitle('Certifications');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        for (const cert of cvData.certifications) {
-            checkPage(5);
-            doc.text('•  ' + cert, margin, y);
-            y += 4.2;
-        }
-        y += 3;
-    }
-
-    // Languages
-    if (cvData.languages?.length) {
-        sectionTitle('Langues');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        doc.text(cvData.languages.join('  •  '), margin, y);
-        y += 6;
-    }
-
-    // Interests
-    if (cvData.interests?.length) {
-        sectionTitle('Centres d\'intérêt');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        doc.text(cvData.interests.join('  •  '), margin, y);
-        y += 6;
-    }
-
-    // Invisible ATS keywords
-    addInvisibleATSKeywords(doc, cvData.addedKeywords);
-}
-
-function renderClassicHeader(doc, name, cvData, margin, y, C) {
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.primary);
-    doc.text(name, margin, y);
-    y += 8;
-    if (cvData.personalInfo?.title) {
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.accent);
-        doc.text(cvData.personalInfo.title, margin, y);
-        y += 6;
-    }
-    return y;
-}
-
-// ============================================================
-// CV TEMPLATE: MODERN (2-column sidebar)
-// ============================================================
-function generateModernCV(doc, cvData, name, photoDataURL) {
-    const SIDEBAR_W = 65;
-    const MAIN_X = SIDEBAR_W + 8;
-    const MAIN_W = PAGE_W - MAIN_X - 12;
-    const M = 8;
-
-    const S = {
-        bg: [35, 40, 75],
-        accent: [99, 102, 241],
-        text: [220, 220, 240],
-        muted: [160, 165, 195],
-        title: [140, 160, 255],
-        tagBg: [55, 60, 105],
-    };
-    const Main = {
-        text: [35, 35, 50],
-        accent: [67, 56, 202],
-        secondary: [100, 100, 130],
-        line: [225, 225, 240],
-    };
-
-    let sideY = 12;
-    let mainY = 12;
-
-    function drawSidebar() {
-        doc.setFillColor(...S.bg);
-        doc.rect(0, 0, SIDEBAR_W, PAGE_H, 'F');
-        doc.setFillColor(...S.accent);
-        doc.rect(0, 0, SIDEBAR_W, 3, 'F');
-    }
-
-    drawSidebar();
-
-    // Photo
-    if (photoDataURL) {
-        try {
-            const ps = 36;
-            const px = (SIDEBAR_W - ps) / 2;
-            doc.addImage(photoDataURL, 'JPEG', px, sideY, ps, ps);
-            doc.setDrawColor(...S.accent);
-            doc.setLineWidth(1);
-            doc.circle(px + ps / 2, sideY + ps / 2, ps / 2 + 0.5, 'S');
-            sideY += ps + 8;
-        } catch (e) { console.warn(e); }
-    }
-
-    // Sidebar name
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...S.text);
-    const nl = doc.splitTextToSize(name, SIDEBAR_W - 2 * M);
-    for (const n of nl) { doc.text(n, SIDEBAR_W / 2, sideY, { align: 'center' }); sideY += 4.5; }
-    sideY += 2;
-
-    function sideSection(title) {
-        sideY += 5;
-        doc.setFontSize(7.5);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...S.title);
-        doc.text(title.toUpperCase(), M, sideY);
-        sideY += 1.5;
-        doc.setDrawColor(...S.accent);
-        doc.setLineWidth(0.4);
-        doc.line(M, sideY, SIDEBAR_W - M, sideY);
-        sideY += 4;
-    }
-
-    // Contact
-    const pi = cvData.personalInfo || {};
-    const contacts = [];
-    if (pi.email) contacts.push({ icon: '✉', val: pi.email });
-    if (pi.phone) contacts.push({ icon: '☎', val: pi.phone });
-    if (pi.location) contacts.push({ icon: '📍', val: pi.location });
-    if (pi.linkedin) contacts.push({ icon: '🔗', val: pi.linkedin });
-
-    if (contacts.length) {
-        sideSection('Contact');
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...S.muted);
-        for (const c of contacts) {
-            const cl = doc.splitTextToSize(c.val, SIDEBAR_W - 2 * M - 4);
-            for (let i = 0; i < cl.length; i++) {
-                doc.text(i === 0 ? `${c.icon}  ${cl[i]}` : `     ${cl[i]}`, M, sideY);
-                sideY += 3.5;
-            }
-            sideY += 1;
-        }
-    }
-
-    // Skills
-    if (cvData.keySkills?.length) {
-        sideSection('Compétences');
-        doc.setFontSize(6.8);
-        for (const skill of cvData.keySkills) {
-            if (sideY > PAGE_H - 15) break;
-            const tw = Math.min(doc.getTextWidth(skill) + 6, SIDEBAR_W - 2 * M);
-            doc.setFillColor(...S.tagBg);
-            doc.roundedRect(M, sideY - 3.5, tw, 5, 1.5, 1.5, 'F');
-            doc.setTextColor(...S.text);
-            doc.text(skill, M + 3, sideY);
-            sideY += 7;
-        }
-    }
-
-    // Languages
-    if (cvData.languages?.length) {
-        sideSection('Langues');
-        doc.setFontSize(7.5);
-        doc.setTextColor(...S.muted);
-        for (const lang of cvData.languages) {
-            if (sideY > PAGE_H - 15) break;
-            doc.text('•  ' + lang, M, sideY);
-            sideY += 4.5;
-        }
-    }
-
-    // Certifications
-    if (cvData.certifications?.length) {
-        sideSection('Certifications');
-        doc.setFontSize(7);
-        doc.setTextColor(...S.muted);
-        for (const cert of cvData.certifications) {
-            if (sideY > PAGE_H - 15) break;
-            const cl = doc.splitTextToSize('•  ' + cert, SIDEBAR_W - 2 * M);
-            for (const c of cl) { doc.text(c, M, sideY); sideY += 3.5; }
-            sideY += 1;
-        }
-    }
-
-    // === MAIN CONTENT ===
-    function mainCheck(need = 20) {
-        if (mainY + need > PAGE_H - 12) { doc.addPage(); drawSidebar(); mainY = 12; }
-    }
-
-    function mainTitle(title) {
-        mainCheck(16);
-        mainY += 3;
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...Main.accent);
-        doc.text(title.toUpperCase(), MAIN_X, mainY);
-        mainY += 1.5;
-        doc.setDrawColor(...Main.accent);
-        doc.setLineWidth(0.5);
-        doc.line(MAIN_X, mainY, MAIN_X + 35, mainY);
-        doc.setDrawColor(...Main.line);
-        doc.setLineWidth(0.12);
-        doc.line(MAIN_X + 36, mainY, MAIN_X + MAIN_W, mainY);
-        mainY += 5;
-    }
-
-    // Name main side
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...Main.text);
-    doc.text(name, MAIN_X, mainY);
-    mainY += 7;
-    if (pi.title) {
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...Main.accent);
-        doc.text(pi.title, MAIN_X, mainY);
-        mainY += 6;
-    }
-    doc.setDrawColor(...Main.accent);
-    doc.setLineWidth(0.6);
-    doc.line(MAIN_X, mainY, MAIN_X + MAIN_W, mainY);
-    mainY += 7;
-
-    // Summary
-    if (cvData.summary) {
-        mainTitle('Profil');
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(...Main.secondary);
-        const sl = doc.splitTextToSize(cvData.summary, MAIN_W);
-        for (const s of sl) { mainCheck(4.5); doc.text(s, MAIN_X, mainY); mainY += 4.2; }
-        mainY += 3;
-    }
-
-    // Experience
-    if (cvData.experience?.length) {
-        mainTitle('Expérience Professionnelle');
-        for (const exp of cvData.experience) {
-            mainCheck(20);
-            doc.setFontSize(10.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...Main.text);
-            doc.text(exp.title || '', MAIN_X, mainY);
-            mainY += 4.5;
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...Main.accent);
-            doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), MAIN_X, mainY);
-            mainY += 4.5;
-            if (exp.description) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(...Main.secondary);
-                const dl = doc.splitTextToSize(exp.description, MAIN_W - 4);
-                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.8; }
-                mainY += 1.5;
-            }
-            if (exp.bullets?.length) {
-                for (const b of exp.bullets) {
-                    mainCheck(5);
-                    doc.setFillColor(...Main.accent);
-                    doc.circle(MAIN_X + 1.5, mainY - 1, 0.5, 'F');
-                    doc.setFontSize(8.5);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(...Main.text);
-                    const bl = doc.splitTextToSize(b, MAIN_W - 7);
-                    for (let i = 0; i < bl.length; i++) { if (i > 0) mainCheck(4); doc.text(bl[i], MAIN_X + 5, mainY); mainY += 3.8; }
-                    mainY += 0.8;
-                }
-            }
-            mainY += 3;
-        }
-    }
-
-    // Education
-    if (cvData.education?.length) {
-        mainTitle('Formation');
-        for (const edu of cvData.education) {
-            mainCheck(14);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...Main.text);
-            doc.text(edu.degree || '', MAIN_X, mainY);
-            mainY += 4.5;
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...Main.accent);
-            doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), MAIN_X, mainY);
-            mainY += 4;
-            if (edu.description) {
-                doc.setFontSize(7.5);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(...Main.secondary);
-                const dl = doc.splitTextToSize(edu.description, MAIN_W - 4);
-                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.5; }
-            }
-            mainY += 3;
-        }
-    }
-
-    // Projects
-    if (cvData.projects?.length) {
-        mainTitle('Projets');
-        for (const proj of cvData.projects) {
-            mainCheck(12);
-            doc.setFontSize(9.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...Main.text);
-            doc.text(proj.name || '', MAIN_X, mainY);
-            mainY += 4;
-            if (proj.description) {
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...Main.secondary);
-                const pl = doc.splitTextToSize(proj.description, MAIN_W - 4);
-                for (const p of pl) { mainCheck(4); doc.text(p, MAIN_X + 2, mainY); mainY += 3.8; }
-            }
-            mainY += 3;
-        }
-    }
-
-    // Interests (in sidebar if space, else skip)
-    if (cvData.interests?.length && sideY < PAGE_H - 25) {
-        sideSection('Intérêts');
-        doc.setFontSize(7);
-        doc.setTextColor(...S.muted);
-        for (const interest of cvData.interests) {
-            if (sideY > PAGE_H - 15) break;
-            doc.text('•  ' + interest, M, sideY);
-            sideY += 4;
-        }
-    }
-
-    // Invisible ATS keywords
-    addInvisibleATSKeywords(doc, cvData.addedKeywords);
-}
-
-// ============================================================
-// CV TEMPLATE: MINIMAL
-// ============================================================
-function generateMinimalCV(doc, cvData, name, photoDataURL) {
-    const margin = 25;
-    const contentW = PAGE_W - 2 * margin;
-    let y = 28;
-
-    const C = {
-        text: [30, 30, 40],
-        accent: [80, 70, 160],
-        secondary: [100, 100, 120],
-        muted: [150, 150, 165],
-        line: [220, 220, 230],
-    };
-
-    const pi = cvData.personalInfo || {};
-
-    function checkPage(need = 12) {
-        if (y + need > PAGE_H - 15) { doc.addPage(); y = margin; }
-    }
-
-    // Photo centered
-    if (photoDataURL) {
-        try {
-            const ps = 30;
-            const px = (PAGE_W - ps) / 2;
-            doc.addImage(photoDataURL, 'JPEG', px, y, ps, ps);
-            doc.setDrawColor(...C.accent);
-            doc.setLineWidth(0.8);
-            doc.circle(px + ps / 2, y + ps / 2, ps / 2 + 0.5, 'S');
-            y += ps + 6;
-        } catch (e) { console.warn(e); }
-    }
-
-    // Name centered
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.text);
-    doc.text(name, PAGE_W / 2, y, { align: 'center' });
-    y += 8;
-
-    // Title centered
-    if (pi.title) {
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.accent);
-        doc.text(pi.title, PAGE_W / 2, y, { align: 'center' });
-        y += 6;
-    }
-
-    // Contact centered
-    const contacts = [pi.email, pi.phone, pi.location].filter(Boolean);
-    if (contacts.length) {
-        doc.setFontSize(8);
-        doc.setTextColor(...C.muted);
-        doc.text(contacts.join('  |  '), PAGE_W / 2, y, { align: 'center' });
-        y += 5;
-        if (pi.linkedin) {
-            doc.text(pi.linkedin, PAGE_W / 2, y, { align: 'center' });
-            y += 5;
-        }
-    }
-
-    // Thin separator
-    y += 2;
-    doc.setDrawColor(...C.line);
-    doc.setLineWidth(0.2);
-    doc.line(margin + 30, y, PAGE_W - margin - 30, y);
-    y += 10;
-
-    function sectionTitle(title) {
-        checkPage(14);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.accent);
-        doc.text(title.toUpperCase(), margin, y);
-        y += 2;
-        doc.setDrawColor(...C.accent);
-        doc.setLineWidth(0.3);
-        doc.line(margin, y, margin + 20, y);
-        y += 6;
-    }
-
-    // Summary
-    if (cvData.summary) {
-        sectionTitle('Profil');
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        doc.setTextColor(...C.secondary);
-        const sl = doc.splitTextToSize(cvData.summary, contentW);
-        for (const s of sl) { checkPage(4.5); doc.text(s, margin, y); y += 4.2; }
-        y += 6;
-    }
-
-    // Skills as inline
-    if (cvData.keySkills?.length) {
-        sectionTitle('Compétences');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        const txt = cvData.keySkills.join('  •  ');
-        const sl = doc.splitTextToSize(txt, contentW);
-        for (const s of sl) { checkPage(4); doc.text(s, margin, y); y += 4; }
-        y += 6;
-    }
-
-    // Experience
-    if (cvData.experience?.length) {
-        sectionTitle('Expérience');
-        for (const exp of cvData.experience) {
-            checkPage(16);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.text);
-            doc.text(exp.title || '', margin, y);
-            if (exp.period) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...C.muted);
-                doc.text(exp.period, margin + contentW, y, { align: 'right' });
-            }
-            y += 4.5;
-            doc.setFontSize(8.5);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...C.accent);
-            doc.text(exp.company || '', margin, y);
-            y += 4.5;
-            if (exp.description) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(...C.secondary);
-                const dl = doc.splitTextToSize(exp.description, contentW - 4);
-                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
-                y += 1;
-            }
-            if (exp.bullets?.length) {
-                for (const b of exp.bullets) {
-                    checkPage(5);
-                    doc.setFontSize(8.5);
-                    doc.setFont('helvetica', 'normal');
-                    doc.setTextColor(...C.text);
-                    const bl = doc.splitTextToSize('—  ' + b, contentW - 4);
-                    for (const l of bl) { doc.text(l, margin + 2, y); y += 3.8; }
-                    y += 0.8;
-                }
-            }
-            y += 4;
-        }
-    }
-
-    // Education
-    if (cvData.education?.length) {
-        sectionTitle('Formation');
-        for (const edu of cvData.education) {
-            checkPage(10);
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.text);
-            doc.text(edu.degree || '', margin, y);
-            if (edu.period) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...C.muted);
-                doc.text(edu.period, margin + contentW, y, { align: 'right' });
-            }
-            y += 4.5;
-            doc.setFontSize(8.5);
-            doc.setTextColor(...C.accent);
-            doc.text(edu.school || '', margin, y);
-            y += 4;
-            if (edu.description) {
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'italic');
-                doc.setTextColor(...C.secondary);
-                const dl = doc.splitTextToSize(edu.description, contentW - 4);
-                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
-            }
-            y += 3;
-        }
-    }
-
-    // Projects
-    if (cvData.projects?.length) {
-        sectionTitle('Projets');
-        for (const proj of cvData.projects) {
-            checkPage(10);
-            doc.setFontSize(9.5);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...C.text);
-            doc.text(proj.name || '', margin, y);
-            y += 4;
-            if (proj.description) {
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...C.secondary);
-                const pl = doc.splitTextToSize(proj.description, contentW - 4);
-                for (const p of pl) { checkPage(4); doc.text(p, margin + 2, y); y += 3.8; }
-            }
-            y += 3;
-        }
-    }
-
-    // Certifications
-    if (cvData.certifications?.length) {
-        sectionTitle('Certifications');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        for (const cert of cvData.certifications) {
-            checkPage(5);
-            doc.text('•  ' + cert, margin, y);
-            y += 4.2;
-        }
-        y += 3;
-    }
-
-    // Languages
-    if (cvData.languages?.length) {
-        sectionTitle('Langues');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        doc.text(cvData.languages.join('  •  '), margin, y);
-        y += 6;
-    }
-
-    // Interests
-    if (cvData.interests?.length) {
-        sectionTitle('Centres d\'intérêt');
-        doc.setFontSize(8.5);
-        doc.setTextColor(...C.text);
-        doc.text(cvData.interests.join('  •  '), margin, y);
-        y += 6;
-    }
-
-    // Invisible ATS keywords
-    addInvisibleATSKeywords(doc, cvData.addedKeywords);
-}
-
-// ============================================================
-// COVER LETTER TEMPLATE: FORMAL
-// ============================================================
-function generateFormalLetter(doc, letterData, candidateName, jobTitle, companyName) {
-    const margin = 25;
-    const contentW = PAGE_W - 2 * margin;
-    let y = margin;
-
-    const C = {
-        primary: [40, 50, 110],
-        text: [40, 40, 55],
-        secondary: [100, 100, 130],
-        line: [210, 210, 225],
-    };
-
-    // No accent — clean formal look
-    const name = letterData.candidateName || candidateName || '';
-
-    // Name
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.primary);
-    doc.text(name, margin, y);
-    y += 10;
-
-    // Date
-    const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.secondary);
-    doc.text(dateStr, margin, y);
-    y += 10;
-
-    // Subject
-    const subject = letterData.subject || (jobTitle ? `Candidature au poste de ${jobTitle}` : '');
-    if (subject) {
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.text);
-        const ol = doc.splitTextToSize(`Objet : ${subject}`, contentW);
-        for (const l of ol) { doc.text(l, margin, y); y += 5; }
-        y += 5;
-    }
-
-    // Divider
-    doc.setDrawColor(...C.line);
-    doc.setLineWidth(0.3);
-    doc.line(margin, y, margin + contentW, y);
-    y += 10;
-
-    // Body
-    const letterContent = letterData.fullText ||
-        [letterData.greeting, '', letterData.opening, '', letterData.body, '', letterData.closing, '', letterData.signature]
-            .filter(p => p !== undefined).join('\n');
-
-    doc.setFontSize(10.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.text);
-
-    for (const para of letterContent.split('\n')) {
-        if (!para.trim()) { y += 4; continue; }
-        const lines = doc.splitTextToSize(para.trim(), contentW);
-        for (const l of lines) {
-            if (y > PAGE_H - margin - 10) { doc.addPage(); y = margin; }
-            doc.text(l, margin, y);
-            y += 5.5;
-        }
-        y += 2;
-    }
-}
-
-// ============================================================
-// COVER LETTER TEMPLATE: CREATIVE
-// ============================================================
-function generateCreativeLetter(doc, letterData, candidateName, jobTitle, companyName) {
-    const margin = 25;
-    const contentW = PAGE_W - 2 * margin;
-    let y = 0;
-
-    const C = {
-        primary: [67, 56, 202],
-        warm: [225, 112, 85],
-        text: [35, 35, 50],
-        secondary: [80, 80, 105],
-        muted: [140, 140, 160],
-    };
-
-    // Top accent gradient bar
-    doc.setFillColor(...C.primary);
-    doc.rect(0, 0, PAGE_W, 5, 'F');
-    // Add warm accent stripe
-    doc.setFillColor(...C.warm);
-    doc.rect(0, 5, PAGE_W * 0.35, 1.5, 'F');
-
-    y = margin + 4;
-
-    const name = letterData.candidateName || candidateName || '';
-
-    // Name with accent
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.primary);
-    doc.text(name, margin, y);
-    y += 8;
-
-    // Subject as featured line
-    const subject = letterData.subject || (jobTitle ? `Candidature au poste de ${jobTitle}` : '');
-    if (subject) {
-        // Subject background highlight
-        doc.setFontSize(10);
-        const subjectLines = doc.splitTextToSize(subject, contentW - 16);
-        const subjectH = subjectLines.length * 5.5 + 6;
-        doc.setFillColor(245, 243, 255);
-        doc.roundedRect(margin, y - 3, contentW, subjectH, 2, 2, 'F');
-        doc.setDrawColor(...C.primary);
-        doc.setLineWidth(0.3);
-        doc.roundedRect(margin, y - 3, contentW, subjectH, 2, 2, 'S');
-
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.primary);
-        doc.text('Objet', margin + 6, y + 2);
-        y += 6;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.text);
-        for (const l of subjectLines) {
-            doc.text(l, margin + 6, y);
-            y += 5.5;
-        }
-        y += 6;
-    }
-
-    // Date right-aligned
-    const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.muted);
-    doc.text(dateStr, margin + contentW, y, { align: 'right' });
-    y += 10;
-
-    // Body
-    const letterContent = letterData.fullText ||
-        [letterData.greeting, '', letterData.opening, '', letterData.body, '', letterData.closing, '', letterData.signature]
-            .filter(p => p !== undefined).join('\n');
-
-    doc.setFontSize(10.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.text);
-
-    for (const para of letterContent.split('\n')) {
-        if (!para.trim()) { y += 4; continue; }
-        const lines = doc.splitTextToSize(para.trim(), contentW);
-        for (const l of lines) {
-            if (y > PAGE_H - margin - 10) {
-                doc.addPage();
-                doc.setFillColor(...C.primary);
-                doc.rect(0, 0, PAGE_W, 3, 'F');
-                y = margin;
-            }
-            doc.text(l, margin, y);
-            y += 5.5;
-        }
-        y += 2;
-    }
-
-    // Bottom accent line
-    doc.setFillColor(...C.primary);
-    doc.rect(0, PAGE_H - 3, PAGE_W, 3, 'F');
-}
-
-// ============================================================
-// CV TEMPLATE: EXECUTIVE
-// ============================================================
-function generateExecutiveCV(doc, cvData, name, photoDataURL) {
-    const margin = 20;
-    const contentW = PAGE_W - 2 * margin;
-    let y = 0;
-
-    const C = {
-        band: [26, 26, 46],
-        accent: [130, 140, 200],
-        gold: [200, 175, 120],
-        text: [35, 35, 50],
-        secondary: [90, 90, 115],
-        muted: [140, 140, 160],
-        line: [200, 200, 215],
-    };
-
-    // Dark header band
-    const bandH = 48;
-    doc.setFillColor(...C.band);
-    doc.rect(0, 0, PAGE_W, bandH, 'F');
-
-    // Gold accent line
-    doc.setFillColor(...C.gold);
-    doc.rect(0, bandH, PAGE_W, 1.5, 'F');
-
-    y = 16;
-
-    // Photo in band
-    if (photoDataURL) {
-        try {
-            const ps = 26;
-            doc.addImage(photoDataURL, 'JPEG', margin, y - 2, ps, ps);
-            doc.setDrawColor(...C.gold);
-            doc.setLineWidth(0.8);
-            doc.circle(margin + ps / 2, y - 2 + ps / 2, ps / 2 + 0.5, 'S');
-
-            doc.setFontSize(22);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(240, 240, 250);
-            doc.text(name, margin + ps + 10, y + 6);
-
-            if (cvData.personalInfo?.title) {
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...C.accent);
-                doc.text(cvData.personalInfo.title, margin + ps + 10, y + 14);
-            }
-        } catch (e) {
-            doc.setFontSize(22);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(240, 240, 250);
-            doc.text(name, margin, y + 6);
-            if (cvData.personalInfo?.title) {
-                doc.setFontSize(10);
-                doc.setTextColor(...C.accent);
-                doc.text(cvData.personalInfo.title, margin, y + 14);
-            }
-        }
-    } else {
-        doc.setFontSize(22);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(240, 240, 250);
-        doc.text(name, margin, y + 6);
-        if (cvData.personalInfo?.title) {
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...C.accent);
-            doc.text(cvData.personalInfo.title, margin, y + 14);
-        }
-    }
-
-    y = bandH + 10;
-
-    // Contact
-    const pi = cvData.personalInfo || {};
-    const contacts = [pi.email, pi.phone, pi.location, pi.linkedin].filter(Boolean);
-    if (contacts.length) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.secondary);
-        doc.text(contacts.join('  •  '), margin, y);
-        y += 8;
-    }
-
-    function sectionTitle(title) { checkPage(14); doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.band); doc.text(title.toUpperCase(), margin, y); y += 2; doc.setDrawColor(...C.gold); doc.setLineWidth(0.5); doc.line(margin, y, margin + 25, y); doc.setDrawColor(...C.line); doc.setLineWidth(0.1); doc.line(margin + 26, y, margin + contentW, y); y += 6; }
-    function checkPage(need = 15) { if (y + need > PAGE_H - 12) { doc.addPage(); y = margin; } }
-
-    if (cvData.summary) { sectionTitle('Profil'); doc.setFontSize(9); doc.setFont('helvetica', 'italic'); doc.setTextColor(...C.secondary); const sl = doc.splitTextToSize(cvData.summary, contentW); for (const s of sl) { checkPage(4.5); doc.text(s, margin, y); y += 4.2; } y += 4; }
-
-    if (cvData.keySkills?.length) { sectionTitle('Compétences'); doc.setFontSize(8.5); doc.setTextColor(...C.text); const sl = doc.splitTextToSize(cvData.keySkills.join('  •  '), contentW); for (const s of sl) { checkPage(4); doc.text(s, margin, y); y += 4; } y += 4; }
-
-    if (cvData.experience?.length) {
-        sectionTitle('Expérience');
-        for (const exp of cvData.experience) {
-            checkPage(18);
-            doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text);
-            doc.text(exp.title || '', margin, y); y += 4.5;
-            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.gold);
-            doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), margin, y); y += 4.5;
-            if (exp.description) {
-                doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(...C.secondary);
-                const dl = doc.splitTextToSize(exp.description, contentW - 4);
-                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
-                y += 1.5;
-            }
-            if (exp.bullets?.length) {
-                for (const b of exp.bullets) {
-                    checkPage(5);
-                    doc.setFillColor(...C.gold); doc.circle(margin + 1.5, y - 1, 0.5, 'F');
-                    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text);
-                    const bl = doc.splitTextToSize(b, contentW - 6);
-                    for (let i = 0; i < bl.length; i++) { if (i > 0) checkPage(4); doc.text(bl[i], margin + 5, y); y += 3.8; }
-                    y += 0.8;
-                }
-            }
-            y += 3;
-        }
-    }
-
-    if (cvData.education?.length) {
-        sectionTitle('Formation');
-        for (const edu of cvData.education) {
-            checkPage(12);
-            doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text);
-            doc.text(edu.degree || '', margin, y); y += 4.5;
-            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.gold);
-            doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), margin, y); y += 4;
-            if (edu.description) {
-                doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(...C.secondary);
-                const dl = doc.splitTextToSize(edu.description, contentW - 4);
-                for (const d of dl) { checkPage(4); doc.text(d, margin + 2, y); y += 3.8; }
-            }
-            y += 3;
-        }
-    }
-
-    if (cvData.projects?.length) {
-        sectionTitle('Projets');
-        for (const proj of cvData.projects) {
-            checkPage(10);
-            doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text);
-            doc.text(proj.name || '', margin, y); y += 4;
-            if (proj.description) {
-                doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.secondary);
-                const pl = doc.splitTextToSize(proj.description, contentW - 4);
-                for (const p of pl) { checkPage(4); doc.text(p, margin + 2, y); y += 3.8; }
-            }
-            y += 3;
-        }
-    }
-
-    if (cvData.certifications?.length) {
-        sectionTitle('Certifications');
-        doc.setFontSize(8.5); doc.setTextColor(...C.text);
-        for (const cert of cvData.certifications) { checkPage(5); doc.text('•  ' + cert, margin, y); y += 4.2; }
-        y += 3;
-    }
-
-    if (cvData.languages?.length) { sectionTitle('Langues'); doc.setFontSize(8.5); doc.setTextColor(...C.text); doc.text(cvData.languages.join('  •  '), margin, y); y += 6; }
-
-    if (cvData.interests?.length) { sectionTitle('Centres d\'intérêt'); doc.setFontSize(8.5); doc.setTextColor(...C.text); doc.text(cvData.interests.join('  •  '), margin, y); y += 6; }
-
-    addInvisibleATSKeywords(doc, cvData.addedKeywords);
-}
-
-// ============================================================
-// CV TEMPLATE: BOLD (Créatif)
-// ============================================================
-function generateBoldCV(doc, cvData, name, photoDataURL) {
-    const SIDEBAR_W = 65;
-    const MAIN_X = SIDEBAR_W + 8;
-    const MAIN_W = PAGE_W - MAIN_X - 12;
-    const M = 8;
-
-    const S = { bg1: [108, 92, 231], bg2: [162, 155, 254], text: [255, 255, 255], muted: [220, 215, 255], tagBg: [255, 255, 255, 0.2] };
-    const Main = { text: [35, 35, 50], accent: [108, 92, 231], secondary: [100, 100, 130], line: [225, 225, 240] };
-
-    let sideY = 12;
-    let mainY = 12;
-
-    function drawSidebar() {
-        const grd = doc.linearGradient(0, 0, 0, PAGE_H);
-        grd.addColorStop(0, '#6c5ce7');
-        grd.addColorStop(1, '#a29bfe');
-        try { doc.setFillColor(108, 92, 231); doc.rect(0, 0, SIDEBAR_W, PAGE_H, 'F'); /* Gradient fallback */ } catch (e) { doc.setFillColor(108, 92, 231); doc.rect(0, 0, SIDEBAR_W, PAGE_H, 'F'); }
-        // Bottom gradient overlay
-        doc.setFillColor(162, 155, 254);
-        doc.rect(0, PAGE_H * 0.5, SIDEBAR_W, PAGE_H * 0.5, 'F');
-    }
-
-    drawSidebar();
-
-    if (photoDataURL) {
-        try {
-            const ps = 36;
-            const px = (SIDEBAR_W - ps) / 2;
-            doc.addImage(photoDataURL, 'JPEG', px, sideY, ps, ps);
-            doc.setDrawColor(255, 255, 255);
-            doc.setLineWidth(1.2);
-            doc.circle(px + ps / 2, sideY + ps / 2, ps / 2 + 0.5, 'S');
-            sideY += ps + 8;
-        } catch (e) { console.warn(e); }
-    }
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...S.text);
-    const nl = doc.splitTextToSize(name, SIDEBAR_W - 2 * M);
-    for (const n of nl) { doc.text(n, SIDEBAR_W / 2, sideY, { align: 'center' }); sideY += 4.5; }
-    sideY += 3;
-
-    function sideSection(title) { sideY += 5; doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...S.muted); doc.text(title.toUpperCase(), M, sideY); sideY += 1.5; doc.setDrawColor(255, 255, 255); doc.setLineWidth(0.3); doc.line(M, sideY, SIDEBAR_W - M, sideY); sideY += 4; }
-
-    const pi = cvData.personalInfo || {};
-    const contacts = [];
-    if (pi.email) contacts.push('✉  ' + pi.email);
-    if (pi.phone) contacts.push('☎  ' + pi.phone);
-    if (pi.location) contacts.push('📍  ' + pi.location);
-
-    if (contacts.length) { sideSection('Contact'); doc.setFontSize(6.8); doc.setTextColor(...S.muted); for (const c of contacts) { const cl = doc.splitTextToSize(c, SIDEBAR_W - 2 * M); for (const l of cl) { doc.text(l, M, sideY); sideY += 3.5; } sideY += 1; } }
-
-    if (cvData.keySkills?.length) { sideSection('Compétences'); doc.setFontSize(6.5); for (const skill of cvData.keySkills) { if (sideY > PAGE_H - 15) break; doc.setFillColor(255, 255, 255); doc.setGState(new doc.GState({ opacity: 0.15 })); const tw = Math.min(doc.getTextWidth(skill) + 6, SIDEBAR_W - 2 * M); doc.roundedRect(M, sideY - 3.5, tw, 5, 1.5, 1.5, 'F'); doc.setGState(new doc.GState({ opacity: 1 })); doc.setTextColor(255, 255, 255); doc.text(skill, M + 3, sideY); sideY += 7; } }
-
-    if (cvData.languages?.length) { sideSection('Langues'); doc.setFontSize(7.5); doc.setTextColor(...S.muted); for (const lang of cvData.languages) { if (sideY > PAGE_H - 15) break; doc.text('•  ' + lang, M, sideY); sideY += 4.5; } }
-
-    // Main content
-    function mainCheck(need = 20) { if (mainY + need > PAGE_H - 12) { doc.addPage(); drawSidebar(); mainY = 12; } }
-    function mainTitle(title) { mainCheck(16); mainY += 3; doc.setFontSize(11); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.accent); doc.text(title.toUpperCase(), MAIN_X, mainY); mainY += 1.5; doc.setDrawColor(...Main.accent); doc.setLineWidth(0.5); doc.line(MAIN_X, mainY, MAIN_X + 35, mainY); mainY += 5; }
-
-    doc.setFontSize(20); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text); doc.text(name, MAIN_X, mainY); mainY += 7;
-    if (pi.title) { doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent); doc.text(pi.title, MAIN_X, mainY); mainY += 6; }
-    doc.setDrawColor(...Main.accent); doc.setLineWidth(0.6); doc.line(MAIN_X, mainY, MAIN_X + MAIN_W, mainY); mainY += 7;
-
-    if (cvData.summary) { mainTitle('Profil'); doc.setFontSize(9); doc.setFont('helvetica', 'italic'); doc.setTextColor(...Main.secondary); const sl = doc.splitTextToSize(cvData.summary, MAIN_W); for (const s of sl) { mainCheck(4.5); doc.text(s, MAIN_X, mainY); mainY += 4.2; } mainY += 3; }
-
-    if (cvData.experience?.length) {
-        mainTitle('Expérience');
-        for (const exp of cvData.experience) {
-            mainCheck(20);
-            doc.setFontSize(10.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text);
-            doc.text(exp.title || '', MAIN_X, mainY); mainY += 4.5;
-            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent);
-            doc.text([exp.company, exp.period].filter(Boolean).join('  —  '), MAIN_X, mainY); mainY += 4.5;
-            if (exp.description) {
-                doc.setFontSize(8); doc.setFont('helvetica', 'italic'); doc.setTextColor(...Main.secondary);
-                const dl = doc.splitTextToSize(exp.description, MAIN_W - 4);
-                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.8; }
-                mainY += 1.5;
-            }
-            if (exp.bullets?.length) {
-                for (const b of exp.bullets) {
-                    mainCheck(5);
-                    doc.setFillColor(...Main.accent); doc.circle(MAIN_X + 1.5, mainY - 1, 0.5, 'F');
-                    doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.text);
-                    const bl = doc.splitTextToSize(b, MAIN_W - 7);
-                    for (let i = 0; i < bl.length; i++) { if (i > 0) mainCheck(4); doc.text(bl[i], MAIN_X + 5, mainY); mainY += 3.8; }
-                    mainY += 0.8;
-                }
-            }
-            mainY += 3;
-        }
-    }
-
-    if (cvData.education?.length) {
-        mainTitle('Formation');
-        for (const edu of cvData.education) {
-            mainCheck(14);
-            doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text);
-            doc.text(edu.degree || '', MAIN_X, mainY); mainY += 4.5;
-            doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.accent);
-            doc.text([edu.school, edu.period].filter(Boolean).join('  —  '), MAIN_X, mainY); mainY += 4;
-            if (edu.description) {
-                doc.setFontSize(7.5); doc.setFont('helvetica', 'italic'); doc.setTextColor(...Main.secondary);
-                const dl = doc.splitTextToSize(edu.description, MAIN_W - 4);
-                for (const d of dl) { mainCheck(4); doc.text(d, MAIN_X + 2, mainY); mainY += 3.5; }
-            }
-            mainY += 3;
-        }
-    }
-
-    if (cvData.projects?.length) {
-        mainTitle('Projets');
-        for (const proj of cvData.projects) {
-            mainCheck(12);
-            doc.setFontSize(9.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(...Main.text);
-            doc.text(proj.name || '', MAIN_X, mainY); mainY += 4;
-            if (proj.description) {
-                doc.setFontSize(8.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...Main.secondary);
-                const pl = doc.splitTextToSize(proj.description, MAIN_W - 4);
-                for (const p of pl) { mainCheck(4); doc.text(p, MAIN_X + 2, mainY); mainY += 3.8; }
-            }
-            mainY += 3;
-        }
-    }
-
-    // Interests in sidebar if space
-    if (cvData.interests?.length && sideY < PAGE_H - 25) {
-        sideSection('Intérêts');
-        doc.setFontSize(7);
-        doc.setTextColor(...S.muted);
-        for (const interest of cvData.interests) {
-            if (sideY > PAGE_H - 15) break;
-            doc.text('•  ' + interest, M, sideY);
-            sideY += 4;
-        }
-    }
-
-    addInvisibleATSKeywords(doc, cvData.addedKeywords);
-}
-
-// ============================================================
-// COVER LETTER TEMPLATE: ELEGANT
-// ============================================================
-function generateElegantLetter(doc, letterData, candidateName, jobTitle, companyName) {
-    const margin = 28;
-    const contentW = PAGE_W - 2 * margin;
-    let y = 0;
-
-    const C = {
-        primary: [67, 56, 202],
-        frame: [162, 155, 254],
-        text: [40, 40, 55],
-        secondary: [90, 90, 120],
-        muted: [140, 140, 160],
-    };
-
-    // Decorative border frame
-    doc.setDrawColor(...C.frame);
-    doc.setLineWidth(0.8);
-    doc.rect(12, 12, PAGE_W - 24, PAGE_H - 24, 'S');
-    doc.setLineWidth(0.3);
-    doc.rect(14, 14, PAGE_W - 28, PAGE_H - 28, 'S');
-
-    y = 32;
-
-    const name = letterData.candidateName || candidateName || '';
-
-    // Name centered
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...C.primary);
-    doc.text(name, PAGE_W / 2, y, { align: 'center' });
-    y += 6;
-
-    // Decorative separator
-    doc.setDrawColor(...C.frame);
-    doc.setLineWidth(0.4);
-    doc.line(PAGE_W / 2 - 20, y, PAGE_W / 2 + 20, y);
-    y += 10;
-
-    // Date centered
-    const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.muted);
-    doc.text(dateStr, PAGE_W / 2, y, { align: 'center' });
-    y += 10;
-
-    // Subject
-    const subject = letterData.subject || (jobTitle ? `Candidature au poste de ${jobTitle}` : '');
-    if (subject) {
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.text);
-        const sl = doc.splitTextToSize(`Objet : ${subject}`, contentW);
-        for (const l of sl) { doc.text(l, margin, y); y += 5; }
-        y += 6;
-    }
-
-    // Body
-    const letterContent = letterData.fullText ||
-        [letterData.greeting, '', letterData.opening, '', letterData.body, '', letterData.closing, '', letterData.signature]
-            .filter(p => p !== undefined).join('\n');
-
-    doc.setFontSize(10.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.text);
-
-    for (const para of letterContent.split('\n')) {
-        if (!para.trim()) { y += 4; continue; }
-        const lines = doc.splitTextToSize(para.trim(), contentW);
-        for (const l of lines) {
-            if (y > PAGE_H - margin - 16) {
-                doc.addPage();
-                doc.setDrawColor(...C.frame);
-                doc.setLineWidth(0.8);
-                doc.rect(12, 12, PAGE_W - 24, PAGE_H - 24, 'S');
-                doc.setLineWidth(0.3);
-                doc.rect(14, 14, PAGE_W - 28, PAGE_H - 28, 'S');
-                y = 28;
-            }
-            doc.text(l, margin, y);
-            y += 5.5;
-        }
-        y += 2;
-    }
+// Helper to escape an array of strings
+function escapeLatexArray(arr) {
+    if (!arr || !Array.isArray(arr)) return [];
+    return arr.map(escapeLatex);
 }
 
 // ============================================================
@@ -1377,71 +30,382 @@ function generateElegantLetter(doc, letterData, candidateName, jobTitle, company
 // ============================================================
 
 /**
- * Generate adapted CV PDF with chosen template
- * @param {Object} cvData
- * @param {string} candidateName
- * @param {string|null} profilePhotoDataURL
- * @param {'classic'|'modern'|'minimal'|'executive'|'bold'} template
- * @returns {jsPDF}
+ * Generate adapted CV in Standard LaTeX format
+ * Guaranteed to compile with pdflatex
  */
 export function generateAdaptedCVPDF(cvData, candidateName = '', profilePhotoDataURL = null, template = 'classic') {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    if (template === 'twentysecond') {
+        return generateTwentySecondCVPDF(cvData, candidateName);
+    }
+
     const pi = cvData.personalInfo || {};
     const name = pi.fullName || candidateName || 'Candidat';
 
-    switch (template) {
-        case 'modern':
-            generateModernCV(doc, cvData, name, profilePhotoDataURL);
-            break;
-        case 'minimal':
-            generateMinimalCV(doc, cvData, name, profilePhotoDataURL);
-            break;
-        case 'executive':
-            generateExecutiveCV(doc, cvData, name, profilePhotoDataURL);
-            break;
-        case 'bold':
-            generateBoldCV(doc, cvData, name, profilePhotoDataURL);
-            break;
-        case 'classic':
-        default:
-            generateClassicCV(doc, cvData, name, profilePhotoDataURL);
-            break;
+    // Different templates can define different colors and font setups
+    let primaryColor = '40, 50, 110';
+    
+    if (template === 'modern') {
+        primaryColor = '108, 92, 231';
+    } else if (template === 'executive') {
+        primaryColor = '26, 26, 46';
+    } else if (template === 'bold') {
+        primaryColor = '225, 112, 85';
     }
 
-    return doc;
+    let tex = `\\documentclass[11pt,a4paper,sans]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage{lmodern}
+\\usepackage{geometry}
+\\geometry{left=1.5cm, right=1.5cm, top=1.8cm, bottom=1.8cm}
+\\usepackage{xcolor}
+\\usepackage{titlesec}
+\\usepackage{enumitem}
+\\usepackage{hyperref}
+\\usepackage{parskip}
+
+\\definecolor{primary}{RGB}{${primaryColor}}
+\\definecolor{textdark}{RGB}{50, 50, 50}
+
+\\hypersetup{
+    colorlinks=true,
+    linkcolor=primary,
+    filecolor=primary,      
+    urlcolor=primary,
+    pdftitle={CV - ${escapeLatex(name)}},
+}
+
+% Section formatting
+\\titleformat{\\section}{\\Large\\bfseries\\color{primary}}{}{0em}{}[\\titlerule]
+\\titlespacing{\\section}{0pt}{10pt}{6pt}
+
+\\renewcommand{\\familydefault}{\\sfdefault}
+
+\\begin{document}
+\\pagestyle{empty}
+
+{\\begin{center}
+{\\Huge \\bfseries \\color{textdark} ${escapeLatex(name)}} \\\\[0.2cm]
+`;
+
+    if (pi.title) tex += `{\\Large \\color{primary} ${escapeLatex(pi.title)}} \\\\[0.3cm]\n`;
+    
+    let contactInfo = [];
+    if (pi.email) contactInfo.push(`\\href{mailto:${pi.email}}{${escapeLatex(pi.email)}}`);
+    if (pi.phone) contactInfo.push(`${escapeLatex(pi.phone)}`);
+    if (pi.location) contactInfo.push(`${escapeLatex(pi.location)}`);
+    if (pi.linkedin) {
+        let ln = pi.linkedin.replace(/https?:\/\/(www\.)?linkedin\.com\/in\//, '');
+        contactInfo.push(`\\href{${pi.linkedin}}{${escapeLatex(ln)}}`);
+    }
+    if (pi.github) {
+        let gh = pi.github.replace(/https?:\/\/(www\.)?github\.com\//, '');
+        contactInfo.push(`\\href{${pi.github}}{${escapeLatex(gh)}}`);
+    }
+    
+    tex += `${contactInfo.join(' \\quad|\\quad ')}\n\\end{center}}\n\\vspace{0.4cm}\n\n`;
+
+    // Summary
+    if (cvData.summary) {
+        tex += `\\section*{Profil}\n${escapeLatex(cvData.summary)}\n\n`;
+    }
+
+    // Skills
+    if (cvData.keySkills && cvData.keySkills.length > 0) {
+        tex += `\\section*{Compétences}\n`;
+        tex += `\\noindent ${escapeLatexArray(cvData.keySkills).join(', ')}\n\n`;
+    }
+
+    // Experience
+    if (cvData.experience && cvData.experience.length > 0) {
+        tex += `\\section*{Expérience Professionnelle}\n`;
+        cvData.experience.forEach(exp => {
+            tex += `\\noindent\\textbf{${escapeLatex(exp.title || '')}} \\hfill \\textit{${escapeLatex(exp.period || '')}} \\\\\n`;
+            tex += `\\noindent\\textbf{\\color{primary}${escapeLatex(exp.company || '')}} \\\\\n`;
+            if (exp.description) {
+                tex += `\\vspace{-0.2cm}\n\n\\textit{${escapeLatex(exp.description)}}\n\n`;
+            }
+            if (exp.bullets && exp.bullets.length > 0) {
+                tex += `\\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]\n`;
+                exp.bullets.forEach(bullet => {
+                    tex += `  \\item ${escapeLatex(bullet)}\n`;
+                });
+                tex += `\\end{itemize}\n\\vspace{0.2cm}\n`;
+            } else {
+                tex += `\\vspace{0.2cm}\n`;
+            }
+        });
+    }
+
+    // Education
+    if (cvData.education && cvData.education.length > 0) {
+        tex += `\\section*{Formation}\n`;
+        cvData.education.forEach(edu => {
+            tex += `\\noindent\\textbf{${escapeLatex(edu.degree || '')}} \\hfill \\textit{${escapeLatex(edu.period || '')}} \\\\\n`;
+            tex += `\\noindent\\textbf{\\color{primary}${escapeLatex(edu.school || '')}} \\\\\n`;
+            if (edu.description) tex += `${escapeLatex(edu.description)}\n`;
+             tex += `\\vspace{0.2cm}\n\n`;
+        });
+    }
+
+    // Projects
+    if (cvData.projects && cvData.projects.length > 0) {
+        tex += `\\section*{Projets}\n`;
+        cvData.projects.forEach(proj => {
+            tex += `\\noindent\\textbf{${escapeLatex(proj.name || '')}}`;
+            if (proj.link) tex += ` -- \\href{${proj.link}}{Lien}`;
+            tex += `\\\\\n`;
+            tex += `${proj.description ? escapeLatex(proj.description) : ''}\n\\vspace{0.2cm}\n\n`;
+        });
+    }
+
+    // Certifications
+    if (cvData.certifications && cvData.certifications.length > 0) {
+        tex += `\\section*{Certifications}\n\\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]\n`;
+        cvData.certifications.forEach(cert => {
+            tex += `  \\item ${escapeLatex(cert)}\n`;
+        });
+        tex += `\\end{itemize}\n\n`;
+    }
+
+    // Languages and Interests
+    if ((cvData.languages && cvData.languages.length > 0) || (cvData.interests && cvData.interests.length > 0)) {
+         tex += `\\section*{Divers}\n`;
+         if (cvData.languages && cvData.languages.length > 0) {
+             tex += `\\textbf{Langues : } ${escapeLatexArray(cvData.languages).join(', ')} \\\\\n`;
+         }
+         if (cvData.interests && cvData.interests.length > 0) {
+             tex += `\\textbf{Centres d'intérêt : } ${escapeLatexArray(cvData.interests).join(', ')} \\\\\n`;
+         }
+    }
+
+    tex += `\\end{document}\n`;
+    return tex;
 }
 
 /**
- * Generate cover letter PDF with chosen template
- * @param {Object} letterData
- * @param {string} candidateName
- * @param {string} jobTitle
- * @param {string} companyName
- * @param {'formal'|'creative'|'elegant'} template
- * @returns {jsPDF}
+ * Generate cover letter in LaTeX format
  */
 export function generateCoverLetterPDF(letterData, candidateName = '', jobTitle = '', companyName = '', template = 'formal') {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const name = letterData.candidateName || candidateName || '';
+    const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const subject = letterData.subject || (jobTitle ? `Candidature au poste de ${jobTitle}` : '');
+    
+    const letterContent = letterData.fullText || 
+        [letterData.greeting, '', letterData.opening, '', letterData.body, '', letterData.closing, '', letterData.signature]
+            .filter(p => p !== undefined).join('\n\n');
 
-    switch (template) {
-        case 'creative':
-            generateCreativeLetter(doc, letterData, candidateName, jobTitle, companyName);
-            break;
-        case 'elegant':
-            generateElegantLetter(doc, letterData, candidateName, jobTitle, companyName);
-            break;
-        case 'formal':
-        default:
-            generateFormalLetter(doc, letterData, candidateName, jobTitle, companyName);
-            break;
+    let tex = `\\documentclass[11pt,a4paper]{letter}
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage[french]{babel}
+\\usepackage{lmodern}
+
+\\address{${escapeLatex(name)}}
+\\signature{${escapeLatex(name)}}
+\\date{${escapeLatex(dateStr)}}
+
+\\begin{document}
+\\begin{letter}{${escapeLatex(companyName)}}
+`;
+
+    if (subject) {
+        tex += `\\textbf{Objet :} ${escapeLatex(subject)}\n\n`;
+    }
+    
+    tex += `\\opening{Madame, Monsieur,}
+
+${escapeLatex(letterContent).replace(/\\n/g, '\n\n')}
+
+\\closing{Cordialement,}
+
+\\end{letter}
+\\end{document}
+`;
+
+    return tex;
+}
+
+// ============================================================
+// TWENTY-SECOND CV GENERATOR
+// ============================================================
+
+function generateTwentySecondCVPDF(cvData, candidateName) {
+    const pi = cvData.personalInfo || {};
+    const name = pi.fullName || candidateName || 'Candidat';
+    
+    let tex = `\\begin{filecontents*}{twentysecondcv.cls}
+\\ProvidesClass{twentysecondcv}[2015/02/28 CV class]
+\\LoadClass{article}
+\\NeedsTeXFormat{LaTeX2e}
+
+\\RequirePackage[sfdefault]{ClearSans}
+\\def\\arrow#1{\\pspicture[shift=2pt](#1,0)\\psline{->}(#1,0)\\endpspicture}
+\\usepackage{fontawesome}
+\\RequirePackage{tikz}
+\\RequirePackage{xcolor}
+\\RequirePackage[absolute,overlay]{textpos}
+\\RequirePackage{ragged2e}
+\\RequirePackage{etoolbox}
+\\RequirePackage{ifmtarg}
+\\RequirePackage{ifthen}
+\\RequirePackage{pgffor}
+\\RequirePackage{marvosym}
+\\RequirePackage{parskip}
+\\usepackage{enumitem}
+\\setlist[itemize]{leftmargin=*}
+\\RequirePackage[hidelinks]{hyperref}
+\\hypersetup{colorlinks=false,allbordercolors=white}
+\\DeclareOption*{\\PassOptionsToClass{\\CurrentOption}{article}}
+\\ProcessOptions\\relax
+
+\\definecolor{white}{RGB}{255,255,255}
+\\definecolor{gray}{HTML}{4D4D4D}
+\\definecolor{sidecolor}{HTML}{E7E7E7}
+\\definecolor{mainblue}{HTML}{0E5484}
+\\definecolor{maingray}{HTML}{B9B9B9}
+\\definecolor{pblue}{HTML}{0395DE}
+\\definecolor{test}{HTML}{0077be}
+\\definecolor{yt}{HTML}{c71610}
+\\definecolor{linkedin}{HTML}{0085AE}
+\\colorlet{headercolor}{gray}
+
+\\pagestyle{empty}
+\\setlength{\\parindent}{0pt}
+\\newcommand\\headingfont{\\sffamily\\bfseries}
+\\setlength{\\TPHorizModule}{1cm}
+\\setlength{\\TPVertModule}{1cm}
+\\newcommand{\\profilesection}[2]{\\vspace{8pt}{\\color{black!80} \\huge #1 \\rule[0.15\\baselineskip]{#2}{1pt}}}
+\\newcommand{\\cvdate}[1]{\\renewcommand{\\cvdate}{#1}}
+\\newcommand{\\cvlinkedin}[1]{\\renewcommand{\\cvlinkedin}{#1}}
+\\newcommand{\\cvgithub}[1]{\\renewcommand{\\cvgithub}{#1}}
+\\newcommand{\\cvmail}[1]{\\renewcommand{\\cvmail}{#1}}
+\\newcommand{\\cvnumberphone}[1]{\\renewcommand{\\cvnumberphone}{#1}}
+\\newcommand{\\cvaddress}[1]{\\renewcommand{\\cvaddress}{#1}}
+\\newcommand{\\cvsite}[1]{\\renewcommand{\\cvsite}{#1}}
+\\newcommand{\\aboutme}[1]{\\renewcommand{\\aboutme}{#1}}
+\\newcommand{\\profilepic}[1]{\\renewcommand{\\profilepic}{#1}}
+\\newcommand{\\cvname}[1]{\\renewcommand{\\cvname}{#1}}
+\\newcommand{\\cvjobtitle}[1]{\\renewcommand{\\cvjobtitle}{#1}}
+\\newcommand*\\icon[1]{\\tikz[baseline=(char.base)]{\\node[shape=circle,draw,inner sep=1pt, fill=mainblue,mainblue,text=white] (char) {#1};}}
+
+\\newcommand\\education[1]{ \\renewcommand{\\education}{ {#1} } }
+\\newcommand\\skills[1]{ \\renewcommand{\\skills}{ {#1} } }
+
+\\newcommand{\\makeprofile}{
+  \\begin{tikzpicture}[remember picture,overlay]
+      \\node [rectangle, fill=sidecolor, anchor=north, minimum width=9cm, minimum height=\\paperheight+1cm] (box) at (-5cm,0.5cm){};
+  \\end{tikzpicture}
+  \\begin{textblock}{6}(0.5, 0.2)
+    \\vspace{4mm}
+    {\\Huge\\color{pblue}\\cvname}
+    \\vspace{2mm}
+    {\\Large\\color{black!80}\\cvjobtitle}
+    \\vspace{3mm}
+    \\renewcommand{\\arraystretch}{2}
+    \\begin{tabular}{p{1cm} @{\\hskip 0.5cm}p{5cm}}
+      \\ifthenelse{\\equal{\\cvnumberphone}{}}{}{
+        {$ \\begin{array}{l} \\hspace{4mm} \\huge \\textnormal{\\faMobile} \\end{array} $} & \\cvnumberphone\\\\}
+      \\ifthenelse{\\equal{\\cvsite}{}}{}{
+        {$ \\begin{array}{l} \\hspace{2.8mm} \\huge \\textnormal{\\textcolor{test}{\\faGlobe}} \\end{array} $} & \\href{http://\\cvsite}{\\cvsite} \\\\}
+      \\ifthenelse{\\equal{\\cvmail}{}}{}{
+        {$ \\begin{array}{l} \\hspace{2.5mm} \\huge \\textnormal{\\textcolor{yt}{\\faEnvelopeO}} \\end{array} $} & \\href{mailto:\\cvmail}{\\cvmail} \\\\}
+      \\ifthenelse{\\equal{\\cvlinkedin}{}}{}{
+        {$ \\begin{array}{l} \\hspace{3mm} \\huge \\textnormal{\\textcolor{linkedin}{\\faLinkedin}} \\end{array} $} & \\href{https://www.linkedin.com/in/\\cvlinkedin}{\\cvlinkedin} \\\\}  
+      \\ifthenelse{\\equal{\\cvgithub}{}}{}{
+        {$ \\begin{array}{l} \\hspace{3mm} \\huge \\textnormal{\\faGithub} \\end{array} $} & \\href{https://www.github.com/\\cvgithub}{\\cvgithub} \\\\}   
+    \\end{tabular}
+    \\vspace{3mm}
+    \\profilesection{Comp\\'{e}tences}{1.2cm}
+    \\vspace{2mm}
+    \\skills
+    \\vspace{3mm}
+    \\profilesection{Contact}{3cm} 
+    \\vspace{2mm}
+    \\education
+  \\end{textblock}
+}
+
+\\newcommand*\\round[2]{%
+  \\tikz[baseline=(char.base)]\\node[anchor=north west, draw,rectangle, rounded corners, inner sep=1.6pt, minimum size=5.5mm, text height=3.6mm, fill=#2,#2,text=white](char){#1};%
+}
+\\def\\@sectioncolor#1#2#3{ {\\color{pblue}#1}#2#3 }
+\\renewcommand{\\section}[1]{
+  \\par\\vspace{\\parskip}
+  {\\LARGE\\headingfont\\color{headercolor} \\@sectioncolor #1}
+  \\par\\vspace{1mm}
+}
+\\setlength{\\tabcolsep}{0pt}
+\\newenvironment{twenty}{ \\begin{tabular*}{\\textwidth}{@{\\extracolsep{\\fill}}ll} }{ \\end{tabular*} }
+\\newcommand{\\twentyitem}[6]{
+  #1&\\parbox[t]{0.83\\textwidth}{
+    \\textbf{#3} \\hfill {\\footnotesize#4}}\\\\
+  #2&\\parbox[t]{0.83\\textwidth}{
+    \\ifblank{#5}{}{#5 \\\\}#6}\\\\
+  \\multicolumn{2}{c}{}\\\\
+}
+\\RequirePackage[left=7.6cm,top=0.1cm,right=1cm,bottom=0.1cm,nohead,nofoot]{geometry}
+\\end{filecontents*}
+
+\\documentclass[]{twentysecondcv}
+\\begin{document}
+`;
+
+    tex += `\\cvname{${escapeLatex(name)}}\n`;
+    tex += `\\cvjobtitle{${escapeLatex(pi.title || '')}}\n`;
+    tex += `\\cvmail{${escapeLatex(pi.email || '')}}\n`;
+    tex += `\\cvnumberphone{${escapeLatex(pi.phone || '')}}\n`;
+    tex += `\\cvsite{${escapeLatex(pi.location || '')}}\n`;
+
+    let ln = (pi.linkedin || '').replace(/https?:\/\/(www\.)?linkedin\.com\/in\//, '');
+    let gh = (pi.github || '').replace(/https?:\/\/(www\.)?github\.com\//, '');
+    tex += `\\cvlinkedin{${escapeLatex(ln)}}\n\\cvgithub{${escapeLatex(gh)}}\n`;
+
+    let skillsList = '';
+    if (cvData.keySkills && cvData.keySkills.length > 0) {
+        skillsList = '\\begin{itemize} ' + cvData.keySkills.map(s => '\\item ' + escapeLatex(s)).join(' ') + ' \\end{itemize}';
+    }
+    tex += `\\skills{${skillsList}}\n`;
+    tex += `\\education{}\n`;
+    
+    tex += `\\makeprofile\n\n`;
+
+    if (cvData.summary) {
+        tex += `\\section{Profil}\n${escapeLatex(cvData.summary)}\n\n`;
     }
 
-    return doc;
+    if (cvData.experience && cvData.experience.length > 0) {
+        tex += `\\section{Exp\\'{e}rience}\n\\begin{twenty}\n`;
+        cvData.experience.forEach(exp => {
+            let bullets = '';
+            if (exp.bullets && exp.bullets.length > 0) {
+                bullets = `\\vspace{1mm}\\begin{itemize}[noitemsep,topsep=0pt,leftmargin=*] ` + 
+                          exp.bullets.map(b => `\\item ${escapeLatex(b)}`).join(' ') + 
+                          ` \\end{itemize}`;
+            }
+            tex += `\\twentyitem{${escapeLatex(exp.period || '')}}{}{${escapeLatex(exp.company || '')}}{}{${escapeLatex(exp.title || '')}}{${escapeLatex(exp.description || '')} ${bullets}}\n`;
+        });
+        tex += `\\end{twenty}\n\n`;
+    }
+
+    if (cvData.education && cvData.education.length > 0) {
+        tex += `\\section{Formation}\n\\begin{twenty}\n`;
+        cvData.education.forEach(edu => {
+            tex += `\\twentyitem{${escapeLatex(edu.period || '')}}{}{${escapeLatex(edu.degree || '')}}{}{${escapeLatex(edu.school || '')}}{${escapeLatex(edu.description || '')}}\n`;
+        });
+        tex += `\\end{twenty}\n\n`;
+    }
+
+    tex += `\\end{document}\n`;
+    return tex;
 }
 
 /**
- * Download a jsPDF document
+ * Download a LaTeX document (.tex)
  */
-export function downloadPDF(doc, filename) {
-    doc.save(filename);
+export function downloadPDF(texContent, filename) {
+    // Replace .pdf with .tex if the filename ends with .pdf
+    const texFilename = filename.replace(/\\.pdf$/, '.tex');
+    const blob = new Blob([texContent], { type: "text/plain;charset=utf-8" });
+    saveAs(blob, texFilename);
 }

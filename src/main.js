@@ -90,8 +90,20 @@ const loadingProgressBar = $('#loadingProgressBar');
 const adaptedCVPreview = $('#adaptedCVPreview');
 const coverLetterPreview = $('#coverLetterPreview');
 const downloadCVBtn = $('#downloadCV');
+const previewCVCodeBtn = $('#previewCVCode');
 const downloadCoverLetterBtn = $('#downloadCoverLetter');
+const previewCoverLetterCodeBtn = $('#previewCoverLetterCode');
 const startOverBtn = $('#startOverBtn');
+const viewHistoryBtn = $('#viewHistoryBtn');
+const resultCVTemplateSwitcher = $('#resultCVTemplateSwitcher');
+
+// Preview Modal Elements
+const latexCodeModal = $('#latexCodeModal');
+const closeLatexModalBtn = $('#closeLatexModalBtn');
+const latexForm = $('#latexForm');
+const latexInput = $('#latexInput');
+const latexIframe = $('#latexIframe');
+const latexLoading = $('#latexLoading');
 
 // Loading steps
 const loadingStep1 = $('#loadingStep1');
@@ -112,6 +124,15 @@ const helpLinkGemini = $('#helpLinkGemini');
 const helpLinkMistral = $('#helpLinkMistral');
 const footerProvider = $('#footerProvider');
 
+// History
+const historyBtn = $('#historyBtn');
+const historyModal = $('#historyModal');
+const closeHistoryBtn = $('#closeHistoryBtn');
+const clearHistoryBtn = $('#clearHistoryBtn');
+const historyList = $('#historyList');
+const historyEmpty = $('#historyEmpty');
+const historyBadge = $('#historyBadge');
+
 // Steps indicator
 const stepIndicators = $$('.steps-indicator .step');
 const stepLines = $$('.steps-indicator .step-line');
@@ -125,6 +146,7 @@ function init() {
   updateFooterProvider();
   initParticles();
   refreshLucideIcons();
+  updateHistoryBadge();
 }
 
 function loadSettings() {
@@ -370,9 +392,17 @@ function setupEventListeners() {
   // --- Generate ---
   generateBtn.addEventListener('click', handleGenerate);
 
-  // --- Downloads ---
+  // --- Downloads & Previews ---
   downloadCVBtn.addEventListener('click', handleDownloadCV);
+  previewCVCodeBtn.addEventListener('click', handlePreviewCVCode);
   downloadCoverLetterBtn.addEventListener('click', handleDownloadCoverLetter);
+  previewCoverLetterCodeBtn.addEventListener('click', handlePreviewCoverLetterCode);
+
+  // --- Code Modal ---
+  if (closeLatexModalBtn) closeLatexModalBtn.addEventListener('click', () => latexCodeModal.classList.add('hidden'));
+  if (latexCodeModal) latexCodeModal.addEventListener('click', (e) => {
+    if (e.target === latexCodeModal) latexCodeModal.classList.add('hidden');
+  });
 
   // --- Settings ---
   settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
@@ -394,9 +424,36 @@ function setupEventListeners() {
     showToast('Paramètres sauvegardés !', 'success');
   });
 
+  // --- Result Template Switcher ---
+  if (resultCVTemplateSwitcher) {
+    resultCVTemplateSwitcher.addEventListener('click', (e) => {
+      const btn = e.target.closest('.result-tpl-btn');
+      if (!btn) return;
+      const tpl = btn.dataset.tpl;
+      state.cvTemplate = tpl;
+      resultCVTemplateSwitcher.querySelectorAll('.result-tpl-btn').forEach(b => b.classList.toggle('active', b === btn));
+      showToast(`Modèle « ${TEMPLATE_NAMES[tpl] || tpl} » appliqué`, 'success');
+    });
+  }
+
+  // --- History ---
+  if (historyBtn) historyBtn.addEventListener('click', () => { renderHistoryList(); historyModal.classList.remove('hidden'); });
+  if (viewHistoryBtn) viewHistoryBtn.addEventListener('click', () => { renderHistoryList(); historyModal.classList.remove('hidden'); });
+  if (closeHistoryBtn) closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+  if (historyModal) historyModal.addEventListener('click', (e) => { if (e.target === historyModal) historyModal.classList.add('hidden'); });
+  if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', () => {
+    if (confirm('Effacer tout l\'historique ?')) {
+      clearHistory();
+      renderHistoryList();
+    }
+  });
+
   // --- Keyboard ---
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') settingsModal.classList.add('hidden');
+    if (e.key === 'Escape') {
+      settingsModal.classList.add('hidden');
+      historyModal.classList.add('hidden');
+    }
   });
 }
 
@@ -663,9 +720,23 @@ async function handleGenerate() {
 
     state.coverLetter = letterResult;
 
+    // Save to history
+    saveToHistory({
+      id: Date.now(),
+      date: new Date().toISOString(),
+      jobTitle,
+      companyName,
+      candidateName: cvResult.personalInfo?.fullName || detectCandidateName(state.extractedText) || 'Candidat',
+      matchScore: cvResult.matchScore || null,
+      adaptedCV: cvResult,
+      coverLetter: letterResult,
+      cvTemplate: state.cvTemplate,
+    });
+
     // Short delay for the 100% progress bar to be visible
     await wait(400);
 
+    syncResultTemplateSwitcher(state.cvTemplate);
     renderResults();
     loadingState.classList.add('hidden');
     resultsState.classList.remove('hidden');
@@ -808,11 +879,50 @@ function handleDownloadCoverLetter() {
     const company = companyNameInput.value.trim();
     const doc = generateCoverLetterPDF(state.coverLetter, name, jobTitle, company, state.letterTemplate);
     const safe = (company || jobTitle || 'candidature').replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿçæœ\s-]/g, '').replace(/\s+/g, '_').substring(0, 30);
-    downloadPDF(doc, `Lettre_${safe}.pdf`);
+    downloadPDF(doc, `Lettre_${safe}.pdf`); // Will save as .tex via pdf-generator.js downloadPDF fn
     showToast('Lettre téléchargée !', 'success');
   } catch (err) {
     console.error('Download error:', err);
-    showToast('Erreur de génération du PDF.', 'error');
+    showToast('Erreur de génération.', 'error');
+  }
+}
+
+function handlePreviewCVCode() {
+  if (!state.adaptedCV) return;
+  try {
+    const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
+    const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
+    latexInput.value = tex;
+    latexIframe.src = 'about:blank'; // Clear previous
+    latexLoading.style.opacity = '1';
+    latexCodeModal.classList.remove('hidden');
+    // Give modal time to show loading before submitting form
+    setTimeout(() => {
+        latexForm.submit();
+    }, 100);
+  } catch (err) {
+    console.error('Preview error:', err);
+    showToast('Erreur lors de la génération de l\'aperçu.', 'error');
+  }
+}
+
+function handlePreviewCoverLetterCode() {
+  if (!state.coverLetter) return;
+  try {
+    const name = state.adaptedCV?.personalInfo?.fullName || detectCandidateName(state.extractedText);
+    const jobTitle = jobTitleInput.value.trim();
+    const company = companyNameInput.value.trim();
+    const tex = generateCoverLetterPDF(state.coverLetter, name, jobTitle, company, state.letterTemplate);
+    latexInput.value = tex;
+    latexIframe.src = 'about:blank';
+    latexLoading.style.opacity = '1';
+    latexCodeModal.classList.remove('hidden');
+    setTimeout(() => {
+        latexForm.submit();
+    }, 100);
+  } catch (err) {
+    console.error('Preview error:', err);
+    showToast('Erreur lors de la génération de l\'aperçu.', 'error');
   }
 }
 
@@ -888,9 +998,117 @@ let previewedType = null;
 
 const TEMPLATE_NAMES = {
   classic: 'Classique', modern: 'Moderne', minimal: 'Minimaliste',
-  executive: 'Exécutif', bold: 'Créatif',
+  executive: 'Exécutif', bold: 'Créatif', twentysecond: 'Créatif 2',
   formal: 'Formelle', creative: 'Créative', elegant: 'Élégante',
 };
+
+// ============================================================
+// History System (localStorage)
+// ============================================================
+const HISTORY_KEY = 'adaptacv_history';
+const MAX_HISTORY = 20;
+
+function getHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveToHistory(entry) {
+  const history = getHistory();
+  history.unshift(entry);
+  if (history.length > MAX_HISTORY) history.splice(MAX_HISTORY);
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  } catch(e) { console.warn('History storage full', e); }
+  updateHistoryBadge();
+}
+
+function deleteFromHistory(id) {
+  const history = getHistory().filter(e => e.id !== id);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  updateHistoryBadge();
+}
+
+function clearHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+  updateHistoryBadge();
+}
+
+function updateHistoryBadge() {
+  const count = getHistory().length;
+  if (historyBadge) {
+    historyBadge.textContent = count;
+    historyBadge.classList.toggle('hidden', count === 0);
+    historyBadge.classList.toggle('flex', count > 0);
+  }
+}
+
+function renderHistoryList() {
+  const history = getHistory();
+  if (!historyList) return;
+
+  // Remove old items but keep empty placeholder
+  historyList.querySelectorAll('.history-item').forEach(el => el.remove());
+
+  if (history.length === 0) {
+    historyEmpty.classList.remove('hidden');
+    return;
+  }
+  historyEmpty.classList.add('hidden');
+
+  history.forEach(entry => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const dateStr = new Date(entry.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const score = entry.matchScore ? `<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;">${entry.matchScore}%</span>` : '';
+    item.innerHTML = `
+      <div class="history-item-icon">
+        <span class="material-symbols-outlined">description</span>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div class="history-item-title">${esc(entry.jobTitle || 'Poste non spécifié')} ${entry.companyName ? '@ ' + esc(entry.companyName) : ''}</div>
+        <div class="history-item-meta">${esc(entry.candidateName)} &bull; ${dateStr} ${score}</div>
+      </div>
+      <button class="history-item-delete" title="Supprimer" data-id="${entry.id}">
+        <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+      </button>
+    `;
+
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.history-item-delete')) {
+        const id = Number(e.target.closest('.history-item-delete').dataset.id);
+        deleteFromHistory(id);
+        item.remove();
+        if (getHistory().length === 0) historyEmpty.classList.remove('hidden');
+        updateHistoryBadge();
+        return;
+      }
+      // Restore entry
+      state.adaptedCV = entry.adaptedCV;
+      state.coverLetter = entry.coverLetter;
+      state.cvTemplate = entry.cvTemplate || 'classic';
+      historyModal.classList.add('hidden');
+      // Sync template switcher
+      syncResultTemplateSwitcher(state.cvTemplate);
+      renderResults();
+      goToStep(3);
+      loadingState.classList.add('hidden');
+      resultsState.classList.remove('hidden');
+      newAdaptation.classList.remove('hidden');
+      showToast('Adaptation restaurée depuis l\'historique', 'success');
+    });
+
+    historyList.insertBefore(item, historyEmpty);
+  });
+}
+
+function syncResultTemplateSwitcher(template) {
+  if (!resultCVTemplateSwitcher) return;
+  resultCVTemplateSwitcher.querySelectorAll('.result-tpl-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tpl === template);
+  });
+}
 
 function openTemplatePreview(template, type) {
   previewedTemplate = template;

@@ -176,6 +176,23 @@ Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans back
 IMPORTANT : Ne génère pas de placeholders comme [NOM]. Utilise les vraies données.`;
 }
 
+const CACHE_PREFIX = 'adaptacv_cache_';
+
+function hashCode(str) {
+    let hash = 0;
+    for (let i = 0, len = str.length; i < len; i++) {
+        let chr = str.charCodeAt(i);
+        hash = (hash << 5) - hash + chr;
+        hash |= 0; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+}
+
+function getCacheKey(type, cvText, jobDescription, jobTitle, companyName, language, provider) {
+    const raw = `${type}|${cvText}|${jobDescription}|${jobTitle}|${companyName}|${language}|${provider}`;
+    return CACHE_PREFIX + type + '_' + hashCode(raw);
+}
+
 /**
  * Call the AI API to adapt the CV
  */
@@ -185,10 +202,23 @@ export async function adaptCV(cvText, jobDescription, jobTitle, companyName, onP
         throw new Error('Clé API non configurée. Cliquez sur ⚙️ pour ajouter votre clé API.');
     }
 
-    const provider = PROVIDERS[settings.provider];
+    const providerName = settings.provider;
+    const provider = PROVIDERS[providerName];
     if (!provider) {
         throw new Error('Fournisseur IA non reconnu.');
     }
+
+    const cacheKey = getCacheKey('cv', cvText, jobDescription, jobTitle, companyName, settings.language, providerName);
+    try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            if (onProgress) {
+                onProgress('adapt-start');
+                setTimeout(() => onProgress('adapt-done'), 500);
+            }
+            return JSON.parse(cached);
+        }
+    } catch(e) { console.warn('Cache read error', e); }
 
     const userMessage = `VOICI LE CV COMPLET DU CANDIDAT :
 ---
@@ -227,8 +257,13 @@ Réponds UNIQUEMENT en JSON valide.`;
         userMessage
     );
 
+    const parsedResult = parseJSONResponse(result);
+    try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(parsedResult));
+    } catch(e) { console.warn('Cache write error', e); }
+
     if (onProgress) onProgress('adapt-done');
-    return parseJSONResponse(result);
+    return parsedResult;
 }
 
 /**
@@ -236,7 +271,20 @@ Réponds UNIQUEMENT en JSON valide.`;
  */
 export async function generateCoverLetter(cvText, jobDescription, jobTitle, companyName, onProgress) {
     const settings = getSettings();
-    const provider = PROVIDERS[settings.provider];
+    const providerName = settings.provider;
+    const provider = PROVIDERS[providerName];
+
+    const cacheKey = getCacheKey('letter', cvText, jobDescription, jobTitle, companyName, settings.language, providerName);
+    try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+            if (onProgress) {
+                onProgress('letter-start');
+                setTimeout(() => onProgress('letter-done'), 500);
+            }
+            return JSON.parse(cached);
+        }
+    } catch(e) { console.warn('Cache read error', e); }
 
     const userMessage = `VOICI LE CV COMPLET DU CANDIDAT :
 ---
@@ -268,8 +316,13 @@ Réponds UNIQUEMENT en JSON valide.`;
         userMessage
     );
 
+    const parsedResult = parseJSONResponse(result);
+    try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(parsedResult));
+    } catch(e) { console.warn('Cache write error', e); }
+
     if (onProgress) onProgress('letter-done');
-    return parseJSONResponse(result);
+    return parsedResult;
 }
 
 /**

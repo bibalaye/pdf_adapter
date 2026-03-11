@@ -79,6 +79,13 @@
             </div>
             <span id="footerProvider" class="text-xs font-semibold uppercase tracking-wider opacity-80">Groq</span>
           </div>
+          <button id="historyBtn"
+            class="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-black/8 bg-white text-gray-500 hover:bg-primary/5 hover:text-primary transition-all text-xs font-semibold"
+            title="Historique des CVs">
+            <span class="material-symbols-outlined text-[18px]">history</span>
+            <span class="hidden sm:inline">Historique</span>
+            <span id="historyBadge" class="hidden size-4 bg-primary rounded-full text-white text-[9px] flex items-center justify-center font-bold">0</span>
+          </button>
           <button id="settingsBtn"
             class="flex size-9 items-center justify-center rounded-lg border border-black/8 bg-white text-gray-500 hover:bg-primary/5 hover:text-primary transition-all"
             title="Paramètres IA">
@@ -163,6 +170,35 @@
             <span class="material-symbols-outlined text-lg">save</span>
             Sauvegarder
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- HISTORY MODAL                                -->
+    <!-- ============================================ -->
+    <div id="historyModal" class="modal-overlay hidden">
+      <div class="glass-panel w-[95%] max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b border-gray-100">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-xl">history</span>
+            <h2 class="font-display text-lg font-bold">Historique des adaptations</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="clearHistoryBtn" class="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Tout effacer</button>
+            <button id="closeHistoryBtn"
+              class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+              <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+        </div>
+        <div id="historyList" class="flex-1 overflow-y-auto p-4 space-y-3">
+          <!-- Populated dynamically -->
+          <div id="historyEmpty" class="text-center py-12 text-gray-400">
+            <span class="material-symbols-outlined text-4xl mb-2 block">history_toggle_off</span>
+            <p class="text-sm">Aucune adaptation sauvegard&eacute;e</p>
+            <p class="text-xs mt-1">Vos futures adaptations appara&icirc;tront ici</p>
+          </div>
         </div>
       </div>
     </div>
@@ -565,6 +601,27 @@
                     <span class="material-symbols-outlined text-sm">zoom_in</span>
                   </button>
                 </div>
+                <div
+                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
+                  data-template="twentysecond">
+                  <div class="template-preview template-preview-bold aspect-[3/4] bg-gray-50 p-3 flex gap-2">
+                    <div class="w-1/3 bg-gray-300 rounded"></div>
+                    <div class="w-2/3 space-y-1.5 pt-2">
+                      <div class="h-1 bg-gray-300 rounded w-3/4"></div>
+                      <div class="h-1 bg-gray-200 rounded w-full"></div>
+                      <div class="h-1 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                  <div class="p-3">
+                    <h3 class="font-bold text-xs text-navy-accent">Créatif 2</h3>
+                    <p class="text-[10px] text-gray-400">Design Twenty Second</p>
+                  </div>
+                  <button
+                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
+                    data-template="twentysecond" data-type="cv" title="Aperçu">
+                    <span class="material-symbols-outlined text-sm">zoom_in</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -774,11 +831,28 @@
                 <div id="adaptedCVPreview"
                   class="result-preview flex-1 bg-white/50 rounded-lg p-4 text-xs text-gray-600 max-h-64 overflow-auto border border-white/40 mb-4">
                 </div>
-                <button id="downloadCV"
-                  class="w-full flex items-center justify-center gap-2 h-11 bg-primary hover:bg-primary-light text-white font-semibold rounded-xl transition-all shadow-glow hover:shadow-lg hover:shadow-primary/40 active:scale-95">
-                  <span class="material-symbols-outlined">download</span>
-                  Télécharger le CV (PDF)
-                </button>
+                <div class="flex flex-col gap-2 mt-auto">
+                  <!-- Template Switcher for CV -->
+                  <div class="flex items-center gap-1.5 flex-wrap mb-1" id="resultCVTemplateSwitcher">
+                    <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider w-full mb-0.5">Modèle :</span>
+                    <button class="result-tpl-btn active" data-tpl="classic">Classique</button>
+                    <button class="result-tpl-btn" data-tpl="modern">Moderne</button>
+                    <button class="result-tpl-btn" data-tpl="minimal">Minimal</button>
+                    <button class="result-tpl-btn" data-tpl="executive">Exécutif</button>
+                    <button class="result-tpl-btn" data-tpl="bold">Créatif</button>
+                    <button class="result-tpl-btn" data-tpl="twentysecond">Créatif 2</button>
+                  </div>
+                  <button id="previewCVCode"
+                    class="w-full flex items-center justify-center gap-2 h-10 bg-white hover:bg-gray-50 text-primary font-semibold rounded-xl border border-primary/20 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    Aperçu PDF (LaTeX)
+                  </button>
+                  <button id="downloadCV"
+                    class="w-full flex items-center justify-center gap-2 h-11 bg-primary hover:bg-primary-light text-white font-semibold rounded-xl transition-all shadow-glow hover:shadow-lg hover:shadow-primary/40 active:scale-95">
+                    <span class="material-symbols-outlined">download</span>
+                    Télécharger le CV (.tex)
+                  </button>
+                </div>
               </div>
               <!-- Cover Letter Card -->
               <div
@@ -801,21 +875,33 @@
                 <div id="coverLetterPreview"
                   class="result-preview flex-1 bg-white/50 rounded-lg p-4 text-xs text-gray-600 max-h-64 overflow-auto border border-white/40 mb-4">
                 </div>
-                <button id="downloadCoverLetter"
-                  class="w-full flex items-center justify-center gap-2 h-11 bg-white hover:bg-gray-50 text-navy-accent font-semibold rounded-xl border border-gray-200 transition-all active:scale-95">
-                  <span class="material-symbols-outlined">download</span>
-                  Télécharger la Lettre (PDF)
-                </button>
+                <div class="flex flex-col gap-2 mt-auto">
+                  <button id="previewCoverLetterCode"
+                    class="w-full flex items-center justify-center gap-2 h-10 bg-white hover:bg-gray-50 text-navy-accent font-semibold rounded-xl border border-gray-200 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-sm">visibility</span>
+                    Aperçu PDF (LaTeX)
+                  </button>
+                  <button id="downloadCoverLetter"
+                    class="w-full flex items-center justify-center gap-2 h-11 bg-navy-accent hover:bg-navy-accent/90 text-white font-semibold rounded-xl transition-all active:scale-95">
+                    <span class="material-symbols-outlined">download</span>
+                    Télécharger la Lettre (.tex)
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
           <!-- New Adaptation Button -->
-          <div id="newAdaptation" class="hidden mt-6 flex justify-center">
+          <div id="newAdaptation" class="hidden mt-6 flex justify-center gap-3">
             <button id="startOverBtn"
               class="text-gray-500 hover:text-primary text-sm font-medium flex items-center gap-2 transition-colors">
               <span class="material-symbols-outlined text-lg">refresh</span>
               Nouvelle adaptation
+            </button>
+            <button id="viewHistoryBtn"
+              class="text-gray-500 hover:text-primary text-sm font-medium flex items-center gap-2 transition-colors">
+              <span class="material-symbols-outlined text-lg">history</span>
+              Historique
             </button>
           </div>
         </section>
@@ -825,10 +911,10 @@
     <!-- Footer -->
     <footer class="relative z-10 text-center py-5 text-xs text-gray-400">
       <span class="font-semibold">AdaptaCV</span>
-      <span class="mx-1.5">•</span>
+      <span class="mx-1.5">&bull;</span>
       <span class="inline-flex items-center gap-1">
-        <span class="material-symbols-outlined text-xs">shield</span>
-        Aucune donnée stockée
+        <span class="material-symbols-outlined text-xs">lock</span>
+        Donn&eacute;es stock&eacute;es localement uniquement
       </span>
     </footer>
 
@@ -854,6 +940,38 @@
             <span class="material-symbols-outlined text-lg">check</span>
             Sélectionner ce modèle
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LaTeX Compilation Preview Modal -->
+    <div id="latexCodeModal" class="modal-overlay hidden">
+      <div class="glass-panel w-[90%] max-w-5xl h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200/50 bg-white/50">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-xl">picture_as_pdf</span>
+            <h2 class="font-display text-lg font-bold">Aperçu du PDF (compilation LaTeX)</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="closeLatexModalBtn"
+              class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+              <span class="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-hidden relative bg-gray-100">
+          <div id="latexLoading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10 transition-opacity">
+            <span class="material-symbols-outlined text-4xl text-primary animate-spin mb-3">refresh</span>
+            <p class="text-gray-500 font-medium">Compilation LaTeX en cours...</p>
+            <p class="text-xs text-gray-400 mt-2">Cela peut prendre quelques secondes.</p>
+          </div>
+          <form id="latexForm" action="https://texlive.net/cgi-bin/latexcgi" method="POST" enctype="multipart/form-data" target="latexIframe" class="hidden">
+            <textarea name="filecontents[]" id="latexInput"></textarea>
+            <input type="hidden" name="filename[]" value="document.tex">
+            <input type="hidden" name="engine" value="pdflatex">
+            <input type="hidden" name="return" value="pdf">
+          </form>
+          <iframe name="latexIframe" id="latexIframe" class="w-full h-full border-0 relative z-20" onload="document.getElementById('latexLoading').style.opacity = '0'; pointerEvents = 'none';"></iframe>
         </div>
       </div>
     </div>
