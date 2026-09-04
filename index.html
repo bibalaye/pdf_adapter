@@ -1,1088 +1,277 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AdaptaCV — Adaptez votre CV intelligemment</title>
-  <meta name="description"
-    content="Application IA qui adapte automatiquement votre CV à chaque offre d'emploi et génère une lettre de motivation personnalisée." />
-  <!-- Fonts -->
+  <meta name="theme-color" content="#f4f6f1" />
+  <title>AdaptaCV | Une candidature juste</title>
+  <meta name="description" content="Transformez une offre d'emploi en CV et lettre de motivation adaptés à votre profil." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-    rel="stylesheet" />
-  <!-- Material Symbols -->
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-    rel="stylesheet" />
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            "primary": "#6b5be6",
-            "primary-dark": "#5948d3",
-            "primary-light": "#8b7ef0",
-            "background-light": "#f8f6f3",
-            "background-dark": "#131121",
-            "navy-accent": "#1a1a2e",
-          },
-          fontFamily: {
-            "display": ["Space Grotesk", "sans-serif"],
-            "body": ["Inter", "sans-serif"],
-          },
-          borderRadius: { "DEFAULT": "0.5rem", "lg": "1rem", "xl": "1.5rem", "2xl": "2rem", "full": "9999px" },
-          boxShadow: {
-            'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)',
-            'glass-hover': '0 8px 32px 0 rgba(107, 91, 230, 0.15)',
-            'glow': '0 0 15px rgba(107, 91, 230, 0.5)',
-          }
-        },
-      },
-    }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL@20..48,300..600,0..1&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/png" href="/logo.png" />
 </head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="AdaptaCV, accueil">
+        <span class="brand-mark"><span class="material-symbols-rounded">article</span></span>
+        <span>Adapta<span>CV</span></span>
+      </a>
 
-<body
-  class="mesh-gradient-bg min-h-screen text-navy-accent font-body overflow-x-hidden selection:bg-primary selection:text-white antialiased">
-
-  <div id="app" class="relative flex flex-col min-h-screen">
-
-    <!-- Floating Particles -->
-    <div class="particles" id="particles"></div>
-
-    <!-- ============================================ -->
-    <!-- HEADER / NAV                                 -->
-    <!-- ============================================ -->
-    <nav class="fixed top-0 left-0 right-0 z-50 px-4 md:px-6 py-3">
-      <div class="glass-panel mx-auto max-w-5xl rounded-xl shadow-glass px-5 py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div
-            class="size-9 bg-gradient-to-br from-primary to-primary-dark rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/25">
-            <img src="/logo.png" alt="AdaptaCV Logo" style="width: 22px; height: 22px; object-fit: contain;" />
-          </div>
-          <h2 class="text-lg font-display font-bold tracking-tight">AdaptaCV</h2>
-          <span
-            class="bg-primary/10 text-primary px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-primary/20">BETA</span>
+      <nav class="top-actions" aria-label="Actions principales">
+        <div id="providerPill" class="provider-pill" title="Modèle IA actif">
+          <span class="status-dot"></span>
+          <span id="footerProvider">Groq</span>
         </div>
-        <div class="flex items-center gap-2.5">
-          <div id="providerPill"
-            class="hidden md:flex items-center gap-1.5 bg-white/50 px-3 py-1.5 rounded-lg border border-primary/10">
-            <div class="relative size-2 mr-1">
-              <div class="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
-              <div class="relative size-2 bg-green-500 rounded-full"></div>
-            </div>
-            <span id="footerProvider" class="text-xs font-semibold uppercase tracking-wider opacity-80">Groq</span>
-          </div>
-          <button id="historyBtn"
-            class="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-black/8 bg-white text-gray-500 hover:bg-primary/5 hover:text-primary transition-all text-xs font-semibold"
-            title="Historique des CVs">
-            <span class="material-symbols-outlined text-[18px]">history</span>
-            <span class="hidden sm:inline">Historique</span>
-            <span id="historyBadge"
-              class="hidden size-4 bg-primary rounded-full text-white text-[9px] flex items-center justify-center font-bold">0</span>
-          </button>
-          <button id="settingsBtn"
-            class="flex size-9 items-center justify-center rounded-lg border border-black/8 bg-white text-gray-500 hover:bg-primary/5 hover:text-primary transition-all"
-            title="Paramètres IA">
-            <span class="material-symbols-outlined text-[18px]">settings</span>
-          </button>
+        <button id="historyBtn" class="icon-button text-button" type="button" title="Historique">
+          <span class="material-symbols-rounded">history</span>
+          <span class="button-label">Historique</span>
+          <span id="historyBadge" class="count-badge hidden">0</span>
+        </button>
+        <button id="settingsBtn" class="icon-button" type="button" title="Réglages IA" aria-label="Réglages IA">
+          <span class="material-symbols-rounded">tune</span>
+        </button>
+      </nav>
+    </header>
+
+    <main class="workspace">
+      <div class="journey-header">
+        <div class="steps-indicator" aria-label="Progression">
+          <div class="step active" data-step="1"><span>1</span><strong>Profil</strong></div>
+          <div class="step-line"></div>
+          <div class="step" data-step="2"><span>2</span><strong>Offre</strong></div>
+          <div class="step-line"></div>
+          <div class="step" data-step="3"><span>3</span><strong>Dossier</strong></div>
         </div>
+        <p class="local-note"><span class="material-symbols-rounded">lock</span> Profil mémorisé sur cet appareil</p>
       </div>
-    </nav>
 
-    <!-- ============================================ -->
-    <!-- SETTINGS MODAL                               -->
-    <!-- ============================================ -->
-    <div id="settingsModal" class="modal-overlay hidden">
-      <div class="glass-panel w-[90%] max-w-md rounded-2xl shadow-2xl">
-        <div class="flex items-center justify-between p-5 pb-0">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-primary text-xl">settings</span>
-            <h2 class="font-display text-lg font-bold">Configuration IA</h2>
+      <section id="step1" class="step-content active onboarding-layout">
+        <div class="intro-copy">
+          <p class="eyebrow">Votre profil, une seule fois</p>
+          <h1>Un CV source.<br><em>Toutes vos candidatures.</em></h1>
+          <p>Déposez-le. Nous extrayons votre parcours et le gardons localement pour ne plus vous le redemander.</p>
+          <div class="privacy-points" aria-label="Avantages">
+            <span><span class="material-symbols-rounded">document_scanner</span> OCR intégré</span>
+            <span><span class="material-symbols-rounded">database</span> Sauvegarde locale</span>
           </div>
-          <button id="closeSettingsBtn"
-            class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-            <span class="material-symbols-outlined text-xl">close</span>
-          </button>
         </div>
-        <div class="p-5 space-y-4">
-          <div>
-            <label for="aiProvider"
-              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              <span class="material-symbols-outlined text-primary text-sm opacity-60">smart_toy</span>
-              Fournisseur IA
+
+        <div class="upload-column">
+          <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="Ajouter votre CV PDF">
+            <input type="file" id="fileInput" accept=".pdf,application/pdf" />
+            <span class="upload-icon material-symbols-rounded">upload_file</span>
+            <strong>Déposez votre CV</strong>
+            <span>PDF, 10 Mo maximum</span>
+            <label for="fileInput" class="primary-button compact">
+              Choisir un fichier
+              <span class="material-symbols-rounded">arrow_upward</span>
             </label>
-            <select id="aiProvider"
-              class="form-select w-full h-11 rounded-xl border-0 bg-gray-50 px-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary">
-              <option value="groq">🚀 Groq (Llama 3.3 70B) — Recommandé</option>
-              <option value="gemini">🧠 Google Gemini 2.5 Flash</option>
-              <option value="mistral">🇫🇷 Mistral AI</option>
-            </select>
           </div>
-          <div>
-            <label for="apiKey"
-              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              <span class="material-symbols-outlined text-primary text-sm opacity-60">key</span>
-              Clé API
-            </label>
-            <div class="relative">
-              <input type="password" id="apiKey" placeholder="Entrez votre clé API..."
-                class="form-input w-full h-11 rounded-xl border-0 bg-gray-50 px-4 pr-11 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary" />
-              <button id="toggleApiKey"
-                class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600">
-                <span class="material-symbols-outlined text-lg">visibility</span>
+
+          <div id="filePreview" class="source-card hidden">
+            <div class="source-summary">
+              <span class="file-icon material-symbols-rounded">description</span>
+              <div>
+                <strong id="fileName"></strong>
+                <span id="fileSize"></span>
+              </div>
+              <button id="removeFile" class="icon-button danger" type="button" title="Retirer le CV" aria-label="Retirer le CV">
+                <span class="material-symbols-rounded">delete</span>
               </button>
             </div>
-            <div class="mt-2 space-y-1">
-              <a href="https://console.groq.com/keys" target="_blank" id="helpLinkGroq"
-                class="inline-flex items-center gap-1 text-xs text-primary opacity-75 hover:opacity-100 hover:underline">
-                <span class="material-symbols-outlined text-xs">open_in_new</span> Obtenir une clé Groq (gratuit)
-              </a>
-              <a href="https://aistudio.google.com/apikey" target="_blank" id="helpLinkGemini"
-                class="hidden inline-flex items-center gap-1 text-xs text-primary opacity-75 hover:opacity-100 hover:underline">
-                <span class="material-symbols-outlined text-xs">open_in_new</span> Obtenir une clé Gemini (gratuit)
-              </a>
-              <a href="https://console.mistral.ai/api-keys" target="_blank" id="helpLinkMistral"
-                class="hidden inline-flex items-center gap-1 text-xs text-primary opacity-75 hover:opacity-100 hover:underline">
-                <span class="material-symbols-outlined text-xs">open_in_new</span> Obtenir une clé Mistral (gratuit)
-              </a>
+            <div id="extractionStatus" class="extraction-status is-loading">
+              <span class="scan-line"></span>
+              <span class="material-symbols-rounded">document_scanner</span>
+              <div><strong>Lecture du CV</strong><span id="charCount">Préparation...</span></div>
             </div>
+
+            <div id="extractedTextContainer" class="hidden">
+              <div id="extractedText" class="extracted-text"></div>
+            </div>
+            <div id="pdfPreviewContainer" class="hidden">
+              <button id="togglePreview" class="subtle-button" type="button">Aperçu original</button>
+              <div id="pdfPreviewPages" class="pdf-preview-pages collapsed"></div>
+            </div>
+            <div id="manualInputContainer" class="manual-fallback hidden">
+              <label for="manualCVText">Le texte est difficile à lire. Collez votre CV.</label>
+              <textarea id="manualCVText" rows="7" placeholder="Contenu de votre CV"></textarea>
+              <span id="manualCharCount">0 caractère</span>
+            </div>
+          </div>
+
+          <button id="nextStep1" class="primary-button full-width" type="button" disabled>
+            Continuer
+            <span class="material-symbols-rounded">arrow_forward</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="step2" class="step-content offer-step">
+        <div class="offer-heading">
+          <button id="prevStep2" class="back-button" type="button"><span class="material-symbols-rounded">arrow_back</span> Retour</button>
+          <h1>Collez l’offre.<br><em>On s’occupe du reste.</em></h1>
+          <p>Le poste, les compétences et le ton seront détectés automatiquement.</p>
+        </div>
+
+        <div class="offer-layout">
+          <aside class="profile-rail">
+            <div class="rail-label">CV source</div>
+            <div class="saved-profile">
+              <span class="material-symbols-rounded">task</span>
+              <div><strong id="savedCVName">CV enregistré</strong><span id="savedCVMeta">Disponible localement</span></div>
+              <button id="changeCVBtn" class="icon-button" type="button" title="Changer de CV" aria-label="Changer de CV"><span class="material-symbols-rounded">edit</span></button>
+            </div>
+            <div class="flow-preview" aria-hidden="true">
+              <div><span class="material-symbols-rounded">description</span><b>Votre CV</b></div>
+              <span class="flow-arrow material-symbols-rounded">south</span>
+              <div class="flow-ai"><span class="material-symbols-rounded">auto_awesome</span><b>Adaptation IA</b></div>
+              <span class="flow-arrow material-symbols-rounded">south</span>
+              <div><span class="material-symbols-rounded">folder_open</span><b>2 documents</b></div>
+            </div>
+          </aside>
+
+          <div class="offer-editor">
+            <label for="jobDescription">Offre d’emploi</label>
+            <textarea id="jobDescription" rows="13" placeholder="Collez l’offre complète ici..."></textarea>
+            <div class="editor-footer">
+              <span id="jobDescCount">0 caractère</span>
+              <span><span class="material-symbols-rounded">auto_awesome</span> Analyse automatique</span>
+            </div>
+
+            <details class="advanced-options">
+              <summary><span><span class="material-symbols-rounded">tune</span> Personnaliser</span><span class="material-symbols-rounded chevron">expand_more</span></summary>
+              <div class="advanced-content">
+                <div class="field-grid">
+                  <label for="jobTitle">Poste <small>optionnel</small><input id="jobTitle" type="text" placeholder="Ex. Product Designer" /></label>
+                  <label for="companyName">Entreprise <small>optionnel</small><input id="companyName" type="text" placeholder="Ex. Acme" /></label>
+                </div>
+
+                <div id="profilePhotoSection" class="photo-option">
+                  <input type="file" id="profilePhotoInput" accept="image/*" hidden />
+                  <div id="profilePhotoPreview"><span class="material-symbols-rounded">add_a_photo</span></div>
+                  <div><strong>Photo de profil</strong><span>Optionnelle</span></div>
+                  <button id="removeProfilePhoto" class="subtle-button hidden" type="button">Retirer</button>
+                </div>
+
+                <div class="template-section">
+                  <span class="field-label">Style du CV</span>
+                  <div id="cvTemplateGrid" class="choice-grid">
+                    <button class="template-card selected" data-template="classic" type="button"><span class="template-swatch classic"></span><strong>Clair</strong></button>
+                    <button class="template-card" data-template="modern" type="button"><span class="template-swatch modern"></span><strong>Moderne</strong></button>
+                    <button class="template-card" data-template="minimal" type="button"><span class="template-swatch minimal"></span><strong>Minimal</strong></button>
+                    <button class="template-card" data-template="executive" type="button"><span class="template-swatch executive"></span><strong>Exécutif</strong></button>
+                    <button class="template-card" data-template="bold" type="button"><span class="template-swatch bold"></span><strong>Créatif</strong></button>
+                  </div>
+                </div>
+                <div id="letterTemplateGrid" class="visually-hidden"><button class="template-card selected" data-template="formal" type="button">Formelle</button></div>
+              </div>
+            </details>
+
+            <button id="generateBtn" class="primary-button generate-button" type="button" disabled>
+              <span class="material-symbols-rounded">auto_awesome</span>
+              Générer ma candidature
+              <span class="material-symbols-rounded">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="step3" class="step-content result-step">
+        <div id="loadingState" class="hidden generation-state">
+          <div class="generation-visual">
+            <span class="document-sheet sheet-back"></span>
+            <span class="document-sheet sheet-front"><span></span><span></span><span></span><i></i></span>
+            <span class="ai-badge material-symbols-rounded">auto_awesome</span>
           </div>
           <div>
-            <label for="language"
-              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-              <span class="material-symbols-outlined text-primary text-sm opacity-60">language</span>
-              Langue de sortie
-            </label>
-            <select id="language"
-              class="form-select w-full h-11 rounded-xl border-0 bg-gray-50 px-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary">
-              <option value="fr">🇫🇷 Français</option>
-              <option value="en">🇬🇧 English</option>
-            </select>
-          </div>
-          <button id="saveSettings"
-            class="w-full flex items-center justify-center gap-2 h-11 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-95">
-            <span class="material-symbols-outlined text-lg">save</span>
-            Sauvegarder
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- HISTORY MODAL                                -->
-    <!-- ============================================ -->
-    <div id="historyModal" class="modal-overlay hidden">
-      <div class="glass-panel w-[95%] max-w-2xl max-h-[85vh] rounded-2xl shadow-2xl flex flex-col">
-        <div class="flex items-center justify-between p-5 border-b border-gray-100">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-primary text-xl">history</span>
-            <h2 class="font-display text-lg font-bold">Historique des adaptations</h2>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="clearHistoryBtn"
-              class="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Tout
-              effacer</button>
-            <button id="closeHistoryBtn"
-              class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-              <span class="material-symbols-outlined text-xl">close</span>
-            </button>
-          </div>
-        </div>
-        <div id="historyList" class="flex-1 overflow-y-auto p-4 space-y-3">
-          <!-- Populated dynamically -->
-          <div id="historyEmpty" class="text-center py-12 text-gray-400">
-            <span class="material-symbols-outlined text-4xl mb-2 block">history_toggle_off</span>
-            <p class="text-sm">Aucune adaptation sauvegard&eacute;e</p>
-            <p class="text-xs mt-1">Vos futures adaptations appara&icirc;tront ici</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================================ -->
-    <!-- MAIN CONTENT                                 -->
-    <!-- ============================================ -->
-    <main class="flex-1 pt-24 pb-10 px-4 md:px-6">
-      <div class="w-full max-w-5xl mx-auto flex flex-col gap-6">
-
-        <!-- ====== STEP INDICATOR ====== -->
-        <div class="steps-indicator w-full max-w-lg mx-auto mb-2">
-          <div class="flex justify-between items-center relative">
-            <!-- Progress line BG -->
-            <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded-full z-0"></div>
-            <!-- Step Line 1 -->
-            <div
-              class="step-line absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full z-0 transition-all duration-500"
-              style="width:0%"></div>
-            <!-- Step 1 -->
-            <div class="step active relative z-10 flex flex-col items-center gap-2" data-step="1">
-              <div
-                class="step-circle size-9 rounded-full bg-primary text-white flex items-center justify-center shadow-lg ring-4 ring-white transition-all">
-                <span class="material-symbols-outlined text-base step-icon" style="display:none;">upload_file</span>
-                <span class="step-number font-display font-medium text-sm">1</span>
-              </div>
-              <span class="step-label text-xs font-semibold text-primary uppercase tracking-wider">Votre CV</span>
-            </div>
-            <!-- Step Line Spacer -->
-            <div class="step-line relative z-0 flex-1"></div>
-            <!-- Step 2 -->
-            <div class="step relative z-10 flex flex-col items-center gap-2" data-step="2">
-              <div
-                class="step-circle size-9 rounded-full bg-white border-2 border-gray-200 text-gray-400 flex items-center justify-center ring-4 ring-white transition-all">
-                <span class="material-symbols-outlined text-base step-icon" style="display:none;">work</span>
-                <span class="step-number font-display font-medium text-sm">2</span>
-              </div>
-              <span class="step-label text-xs font-medium text-gray-400 uppercase tracking-wider">Offre</span>
-            </div>
-            <!-- Step Line Spacer -->
-            <div class="step-line relative z-0 flex-1"></div>
-            <!-- Step 3 -->
-            <div class="step relative z-10 flex flex-col items-center gap-2" data-step="3">
-              <div
-                class="step-circle size-9 rounded-full bg-white border-2 border-gray-200 text-gray-400 flex items-center justify-center ring-4 ring-white transition-all">
-                <span class="material-symbols-outlined text-base step-icon" style="display:none;">auto_awesome</span>
-                <span class="step-number font-display font-medium text-sm">3</span>
-              </div>
-              <span class="step-label text-xs font-medium text-gray-400 uppercase tracking-wider">Résultats</span>
+            <p class="eyebrow">Création en cours</p>
+            <h2 id="loadingTitle">Analyse du profil et de l’offre...</h2>
+            <p id="loadingSubtitle">Quelques instants suffisent.</p>
+            <div class="progress-track"><span id="loadingProgressBar"></span></div>
+            <div class="loading-list">
+              <div id="loadingStep1" class="loading-step"><span class="loading-step-icon material-symbols-rounded">radio_button_unchecked</span><span>Comprendre l’offre</span></div>
+              <div id="loadingStep2" class="loading-step"><span class="loading-step-icon material-symbols-rounded">radio_button_unchecked</span><span>Adapter le CV</span></div>
+              <div id="loadingStep3" class="loading-step"><span class="loading-step-icon material-symbols-rounded">radio_button_unchecked</span><span>Rédiger la lettre</span></div>
             </div>
           </div>
         </div>
 
-        <!-- ====================================================== -->
-        <!-- STEP 1: UPLOAD CV                                      -->
-        <!-- ====================================================== -->
-        <section id="step1" class="step-content active">
-          <div class="glass-panel rounded-2xl shadow-glass overflow-hidden flex flex-col md:flex-row min-h-[480px]">
-            <!-- Left: Upload Area -->
-            <div
-              class="flex-1 p-8 md:p-10 flex flex-col justify-center items-center text-center border-b md:border-b-0 md:border-r border-gray-100">
-              <div class="mb-6">
-                <h1 class="font-display text-3xl md:text-4xl font-bold text-navy-accent mb-3 leading-tight">
-                  Uploadez votre CV
-                </h1>
-                <p class="text-gray-500 max-w-md mx-auto leading-relaxed text-sm">
-                  Glissez-déposez votre CV au format PDF ou cliquez pour parcourir. Notre IA extrait compétences,
-                  expérience et détails automatiquement.
-                </p>
-              </div>
-              <!-- Drop Zone -->
-              <div id="dropZone" class="w-full max-w-md group cursor-pointer relative">
-                <div
-                  class="dashed-border-animated bg-white/40 rounded-xl p-8 transition-all duration-300 hover:bg-primary/5 hover:scale-[1.01]">
-                  <div class="flex flex-col items-center gap-3">
-                    <div
-                      class="size-14 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <span class="material-symbols-outlined text-3xl">cloud_upload</span>
-                    </div>
-                    <div>
-                      <p class="text-base font-bold font-display text-navy-accent">Glissez votre PDF ici</p>
-                      <p class="text-xs text-gray-400 mt-1">ou</p>
-                    </div>
-                    <label for="fileInput"
-                      class="bg-primary hover:bg-primary-dark text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/30 transition-all hover:shadow-primary/50 flex items-center gap-2 cursor-pointer">
-                      <span class="material-symbols-outlined text-lg">folder_open</span>
-                      Parcourir les fichiers
-                    </label>
-                    <input type="file" id="fileInput" accept=".pdf"
-                      style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0,0,0,0);pointer-events:none;" />
-                    <p class="text-[11px] text-gray-400 mt-1">PDF • Max 10 Mo</p>
-                  </div>
-                </div>
-              </div>
-              <!-- File Preview -->
-              <div id="filePreview" class="hidden w-full max-w-md mt-4 space-y-3">
-                <div
-                  class="file-info flex items-center gap-3 bg-white/70 rounded-xl p-3 border border-white/50 shadow-sm">
-                  <div class="size-10 rounded-lg bg-red-50 flex items-center justify-center text-red-500">
-                    <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <span id="fileName" class="block text-sm font-semibold text-navy-accent truncate"></span>
-                    <span id="fileSize" class="text-xs text-gray-400"></span>
-                  </div>
-                  <button id="removeFile"
-                    class="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Supprimer">
-                    <span class="material-symbols-outlined text-lg">delete</span>
-                  </button>
-                </div>
-                <!-- PDF Page Preview -->
-                <div id="pdfPreviewContainer" class="hidden">
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                      <span class="material-symbols-outlined text-sm text-primary">visibility</span>
-                      <span>Aperçu du CV</span>
-                    </div>
-                    <button id="togglePreview" class="p-1 text-gray-400 hover:text-gray-600" title="Réduire/Agrandir">
-                      <span class="material-symbols-outlined text-lg">expand_more</span>
-                    </button>
-                  </div>
-                  <div id="pdfPreviewPages"
-                    class="pdf-preview-pages overflow-auto max-h-64 rounded-lg bg-white/50 p-2 space-y-2"></div>
-                </div>
-                <!-- Extracted Text -->
-                <div id="extractedTextContainer" class="extracted-text-container">
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                      <span class="material-symbols-outlined text-sm text-primary">text_snippet</span>
-                      <span>Texte extrait</span>
-                    </div>
-                    <span id="charCount" class="text-[11px] font-medium text-gray-400"></span>
-                  </div>
-                  <div id="extractedText"
-                    class="extracted-text bg-white/50 rounded-lg p-3 text-xs text-gray-600 max-h-40 overflow-auto leading-relaxed border border-white/40">
-                  </div>
-                </div>
-                <!-- Manual Input Fallback -->
-                <div id="manualInputContainer" class="hidden">
-                  <div class="flex items-start gap-2.5 bg-amber-50 rounded-xl p-3 border border-amber-200 mb-3">
-                    <span class="material-symbols-outlined text-amber-500 mt-0.5">warning</span>
-                    <div>
-                      <strong class="text-sm text-amber-800">PDF basé sur des images détecté</strong>
-                      <p class="text-xs text-amber-600 mt-0.5">L'extraction automatique n'a pas suffi. Collez le contenu
-                        de votre CV ci-dessous.</p>
-                    </div>
-                  </div>
-                  <label for="manualCVText" class="text-xs font-semibold text-gray-600 mb-1.5 block">Contenu de votre
-                    CV</label>
-                  <textarea id="manualCVText" rows="8" placeholder="Collez ici le contenu complet de votre CV..."
-                    class="w-full rounded-xl border-0 bg-white/60 p-3 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary resize-y"></textarea>
-                  <span id="manualCharCount" class="text-[11px] text-gray-400">0 caractères</span>
-                </div>
-              </div>
-            </div>
-            <!-- Right: Info Panel -->
-            <div class="w-full md:w-[340px] bg-white/30 p-6 flex flex-col">
-              <div class="flex items-center justify-between mb-5">
-                <h3 class="font-display font-bold text-base">Analyse en direct</h3>
-                <span class="text-[10px] font-mono bg-navy-accent/5 px-2 py-0.5 rounded">IDLE</span>
-              </div>
-              <div class="flex-1 flex flex-col gap-3">
-                <div class="bg-white/60 rounded-xl p-3 border border-white/40 shadow-sm opacity-50">
-                  <div class="flex items-start gap-2.5">
-                    <div class="w-9 h-11 bg-gray-200 rounded flex items-center justify-center">
-                      <span class="material-symbols-outlined text-gray-400 text-lg">description</span>
-                    </div>
-                    <div class="flex-1 space-y-1.5 py-0.5">
-                      <div class="h-2 bg-gray-200 rounded w-3/4"></div>
-                      <div class="h-2 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                </div>
-                <div class="mt-auto bg-primary/5 rounded-xl p-4 border border-primary/10 relative overflow-hidden">
-                  <div class="absolute -right-3 -top-3 text-primary/10 transform rotate-12">
-                    <span class="material-symbols-outlined text-[80px]">psychology</span>
-                  </div>
-                  <h4 class="font-display font-bold text-primary text-xs mb-1.5 relative z-10">Logique d'extraction IA
-                  </h4>
-                  <p class="text-[11px] text-navy-accent/70 leading-relaxed relative z-10">
-                    Après l'upload, notre modèle IA parse la structure de votre document et identifie
-                    <span class="font-semibold text-primary">Compétences</span>,
-                    <span class="font-semibold text-primary">Expérience</span> et
-                    <span class="font-semibold text-primary">Formation</span> automatiquement.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- Footer Actions -->
-          <div class="flex justify-end items-center mt-4 px-1">
-            <button id="nextStep1"
-              class="bg-gray-200 text-gray-400 cursor-not-allowed px-7 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all disabled:opacity-60"
-              disabled>
-              Continuer
-              <span class="material-symbols-outlined text-lg">arrow_forward</span>
-            </button>
-          </div>
-        </section>
-
-        <!-- ====================================================== -->
-        <!-- STEP 2: JOB CONFIGURATION                              -->
-        <!-- ====================================================== -->
-        <section id="step2" class="step-content">
-          <div class="space-y-6">
-            <!-- Header -->
-            <div>
-              <h1 class="text-2xl md:text-3xl font-bold font-display tracking-tight text-navy-accent">Détails de l'offre
-              </h1>
-              <p class="mt-1.5 text-base text-gray-500">Décrivez le poste et collez l'offre pour que l'IA adapte votre
-                candidature.</p>
-            </div>
-            <!-- Two Column Layout -->
-            <div class="grid gap-6 lg:grid-cols-12">
-              <!-- Left Column -->
-              <div class="flex flex-col gap-5 lg:col-span-5">
-                <!-- Inputs Card -->
-                <div class="glass-panel rounded-2xl p-5 shadow-glass">
-                  <div class="flex flex-col gap-4">
-                    <label class="flex flex-col gap-1.5">
-                      <span class="text-xs font-semibold text-navy-accent">Titre du poste</span>
-                      <input type="text" id="jobTitle" placeholder="Ex: Développeur Full Stack Senior"
-                        class="form-input h-11 w-full rounded-xl border-0 bg-gray-50 px-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary" />
-                    </label>
-                    <label class="flex flex-col gap-1.5">
-                      <span class="text-xs font-semibold text-navy-accent">Nom de l'entreprise</span>
-                      <div class="relative">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                          <span class="material-symbols-outlined text-gray-400 text-[18px]">business</span>
-                        </div>
-                        <input type="text" id="companyName" placeholder="Ex: Google, Microsoft..."
-                          class="form-input h-11 w-full rounded-xl border-0 bg-gray-50 pl-10 pr-4 text-sm ring-1 ring-inset ring-gray-200 focus:ring-2 focus:ring-primary" />
-                      </div>
-                    </label>
-                  </div>
-                </div>
-                <!-- Profile Photo -->
-                <div id="profilePhotoSection" class="glass-panel rounded-2xl p-5 shadow-glass cursor-pointer">
-                  <h3 class="mb-3 text-xs font-semibold text-navy-accent">Photo de profil</h3>
-                  <div class="flex items-center gap-5">
-                    <div id="profilePhotoPreview"
-                      class="relative group size-20 shrink-0 overflow-hidden rounded-full ring-4 ring-white shadow-lg bg-gray-100 flex items-center justify-center text-gray-300">
-                      <span class="material-symbols-outlined text-3xl">person_add</span>
-                    </div>
-                    <input type="file" id="profilePhotoInput" accept="image/*" hidden />
-                    <div class="flex-1">
-                      <div
-                        class="flex w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-4 transition-colors hover:border-primary/50 hover:bg-primary/5">
-                        <div class="text-center">
-                          <div class="text-xs text-gray-500">
-                            <span class="font-semibold text-primary">Cliquez pour uploader</span> ou glissez-déposez
-                          </div>
-                          <p class="text-[10px] text-gray-400 mt-0.5">Optionnel — intégrée au CV généré</p>
-                        </div>
-                      </div>
-                      <button id="removeProfilePhoto"
-                        class="hidden mt-2 flex items-center gap-1 text-xs text-red-500 hover:text-red-600 font-medium">
-                        <span class="material-symbols-outlined text-sm">cancel</span> Supprimer
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <!-- Right Column: Job Description -->
-              <div class="flex flex-col lg:col-span-7 h-full">
-                <div
-                  class="glass-panel relative flex flex-1 flex-col rounded-2xl p-5 shadow-glass h-full min-h-[320px]">
-                  <div class="mb-3 flex items-center justify-between">
-                    <label class="text-xs font-semibold text-navy-accent" for="jobDescription">Description de
-                      l'offre</label>
-                  </div>
-                  <textarea id="jobDescription" rows="10"
-                    class="flex-1 w-full resize-none border-0 bg-transparent p-0 text-sm leading-relaxed text-navy-accent placeholder:text-gray-400 focus:ring-0"
-                    placeholder="Collez ici le texte complet de l'offre d'emploi. Plus il y a de détails, meilleure sera l'adaptation..."></textarea>
-                  <div class="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                    <div class="flex items-center gap-1.5 text-[11px] text-gray-400">
-                      <span class="material-symbols-outlined text-sm">info</span>
-                      <span>Plus de détails = meilleure adaptation</span>
-                    </div>
-                    <span id="jobDescCount" class="text-[11px] font-medium text-gray-400">0 caractères</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Template Selection: CV -->
-            <div class="mt-4">
-              <div class="mb-4">
-                <h2 class="text-lg font-bold text-navy-accent flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary">dashboard</span>
-                  Modèle de CV
-                </h2>
-                <p class="text-xs text-gray-500 mt-0.5">Choisissez un style visuel pour votre CV.</p>
-              </div>
-              <div id="cvTemplateGrid" class="template-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div
-                  class="template-card selected group relative cursor-pointer rounded-2xl bg-white border-2 border-primary shadow-glass-hover overflow-hidden transition-all hover:shadow-lg"
-                  data-template="classic">
-                  <div
-                    class="template-preview template-preview-classic aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
-                    <div class="h-1.5 bg-primary rounded-full w-full"></div>
-                    <div class="h-1 bg-gray-300 rounded w-3/4 mt-1"></div>
-                    <div class="h-1 bg-gray-200 rounded w-full"></div>
-                    <div class="h-1 bg-gray-200 rounded w-2/3"></div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Classique</h3>
-                    <p class="text-[10px] text-gray-400">Simple & professionnel</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="classic" data-type="cv" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="modern">
-                  <div class="template-preview template-preview-modern aspect-[3/4] bg-gray-50 p-3 flex gap-2">
-                    <div class="w-1/3 bg-navy-accent/80 rounded"></div>
-                    <div class="w-2/3 space-y-1.5 pt-2">
-                      <div class="h-1 bg-gray-300 rounded w-3/4"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Moderne</h3>
-                    <p class="text-[10px] text-gray-400">2 colonnes élégant</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="modern" data-type="cv" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="minimal">
-                  <div
-                    class="template-preview template-preview-minimal aspect-[3/4] bg-gray-50 p-3 flex flex-col items-center gap-1.5 pt-4">
-                    <div class="h-1 bg-gray-400 rounded w-1/2"></div>
-                    <div class="flex gap-1 mt-1">
-                      <div class="size-1.5 bg-primary rounded-full"></div>
-                      <div class="size-1.5 bg-primary rounded-full"></div>
-                      <div class="size-1.5 bg-primary rounded-full"></div>
-                    </div>
-                    <div class="h-1 bg-gray-200 rounded w-3/4 mt-1"></div>
-                    <div class="h-1 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Minimaliste</h3>
-                    <p class="text-[10px] text-gray-400">Épuré & aéré</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="minimal" data-type="cv" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="executive">
-                  <div
-                    class="template-preview template-preview-executive aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
-                    <div class="h-5 bg-navy-accent/90 rounded w-full"></div>
-                    <div class="h-1 bg-gray-200 rounded w-full mt-1"></div>
-                    <div class="h-1 bg-gray-200 rounded w-3/4"></div>
-                    <div class="h-1 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Exécutif</h3>
-                    <p class="text-[10px] text-gray-400">Sobre & haut de gamme</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="executive" data-type="cv" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="bold">
-                  <div class="template-preview template-preview-bold aspect-[3/4] bg-gray-50 p-3 flex gap-2">
-                    <div class="w-1/3 bg-gradient-to-b from-primary to-purple-400 rounded"></div>
-                    <div class="w-2/3 space-y-1.5 pt-2">
-                      <div class="h-1 bg-gray-300 rounded w-3/4"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Créatif</h3>
-                    <p class="text-[10px] text-gray-400">Coloré & impactant</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="bold" data-type="cv" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="twentysecond">
-                  <div class="template-preview template-preview-bold aspect-[3/4] bg-gray-50 p-3 flex gap-2">
-                    <div class="w-1/3 bg-gray-300 rounded"></div>
-                    <div class="w-2/3 space-y-1.5 pt-2">
-                      <div class="h-1 bg-gray-300 rounded w-3/4"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent">Créatif 2</h3>
-                    <p class="text-[10px] text-gray-400">Design Twenty Second</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="twentysecond" data-type="cv" title="Aperçu">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                </div>
-                <!-- AltaCV Template Card -->
-                <div
-                  class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                  data-template="altacv">
-                  <div class="template-preview aspect-[3/4] bg-blue-50 p-3 flex gap-2">
-                    <div class="w-2/3 space-y-1.5 pt-2">
-                      <div class="h-2 bg-blue-500 rounded w-3/4"></div>
-                      <div class="h-1 bg-gray-300 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-2/3"></div>
-                      <div class="mt-1 h-1 bg-blue-300 rounded w-1/2"></div>
-                      <div class="h-1 bg-gray-100 rounded w-full"></div>
-                    </div>
-                    <div class="w-1/3 bg-blue-100 rounded flex flex-col gap-1 p-1 pt-2">
-                      <div class="h-1 bg-blue-400 rounded w-full"></div>
-                      <div class="h-1 bg-blue-200 rounded w-3/4"></div>
-                      <div class="h-1 bg-blue-200 rounded w-1/2"></div>
-                    </div>
-                  </div>
-                  <div class="p-3">
-                    <h3 class="font-bold text-xs text-navy-accent flex items-center gap-1">
-                      AltaCV
-                      <span class="text-[9px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-semibold">CTAN</span>
-                    </h3>
-                    <p class="text-[10px] text-gray-400">2 colonnes &bull; LuaLaTeX</p>
-                  </div>
-                  <button
-                    class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                    data-template="altacv" data-type="cv" title="Aperçu AltaCV">
-                    <span class="material-symbols-outlined text-sm">zoom_in</span>
-                  </button>
-                  <!-- MaltaCV Template Card -->
-                  <div
-                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                    data-template="maltacv">
-                    <div class="template-preview aspect-[3/4] bg-orange-50 p-3 flex flex-col gap-2">
-                      <div class="h-2 bg-orange-600 rounded w-1/2"></div>
-                      <div class="h-1 bg-gray-300 rounded w-full"></div>
-                      <div class="h-4 bg-orange-100 rounded w-full mt-1"></div>
-                      <div class="grid grid-cols-2 gap-2 mt-1">
-                        <div class="h-10 bg-gray-200 rounded"></div>
-                        <div class="h-10 bg-gray-200 rounded"></div>
-                      </div>
-                      <div class="h-12 bg-gray-100 rounded w-full mt-1"></div>
-                    </div>
-                    <div class="p-3">
-                      <h3 class="font-bold text-xs text-navy-accent flex items-center gap-1">
-                        MaltaCV
-                        <span
-                          class="text-[9px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-semibold">NEW</span>
-                      </h3>
-                      <p class="text-[10px] text-gray-400">Colorful & Multicol &bull; LuaLaTeX</p>
-                    </div>
-                    <button
-                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                      data-template="maltacv" data-type="cv" title="Aperçu MaltaCV">
-                      <span class="material-symbols-outlined text-sm">zoom_in</span>
-                    </button>
-                  </div>
-                  <!-- MyCV Template Card -->
-                  <div
-                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                    data-template="mycv">
-                    <div class="template-preview aspect-[3/4] bg-sky-50 p-3 flex flex-col gap-2">
-                      <div class="h-4 bg-sky-600 rounded w-3/4"></div>
-                      <div class="h-1 bg-gray-300 rounded w-full"></div>
-                      <div class="grid grid-cols-2 gap-4 mt-2">
-                        <div class="space-y-2">
-                          <div class="h-12 bg-gray-100 rounded"></div>
-                          <div class="h-12 bg-gray-100 rounded"></div>
-                        </div>
-                        <div class="space-y-2">
-                          <div class="h-8 bg-sky-100 rounded"></div>
-                          <div class="h-8 bg-gray-100 rounded"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="p-3">
-                      <h3 class="font-bold text-xs text-navy-accent flex items-center gap-1">
-                        MyCV
-                        <span class="text-[9px] bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded font-semibold">ACADEMIC</span>
-                      </h3>
-                      <p class="text-[10px] text-gray-400">Clean & Multicol &bull; pdfLaTeX</p>
-                    </div>
-                    <button
-                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                      data-template="mycv" data-type="cv" title="Aperçu MyCV">
-                      <span class="material-symbols-outlined text-sm">zoom_in</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Template Selection: Letter -->
-              <div class="mt-4">
-                <div class="mb-4">
-                  <h2 class="text-lg font-bold text-navy-accent flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">edit_note</span>
-                    Modèle de Lettre
-                  </h2>
-                </div>
-                <div id="letterTemplateGrid" class="template-grid grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <div
-                    class="template-card selected group relative cursor-pointer rounded-2xl bg-white border-2 border-primary shadow-glass-hover overflow-hidden transition-all hover:shadow-lg"
-                    data-template="formal">
-                    <div
-                      class="template-preview template-preview-formal aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5 pt-4">
-                      <div class="h-1 bg-gray-400 rounded w-1/3"></div>
-                      <div class="h-3"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-2/3"></div>
-                    </div>
-                    <div class="p-3">
-                      <h3 class="font-bold text-xs text-navy-accent">Formelle</h3>
-                      <p class="text-[10px] text-gray-400">Traditionnel & structuré</p>
-                    </div>
-                    <button
-                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                      data-template="formal" data-type="letter" title="Aperçu">
-                      <span class="material-symbols-outlined text-sm">zoom_in</span>
-                    </button>
-                  </div>
-                  <div
-                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                    data-template="creative">
-                    <div
-                      class="template-preview template-preview-creative aspect-[3/4] bg-gray-50 p-3 flex flex-col gap-1.5">
-                      <div class="h-1.5 bg-primary rounded-full w-full"></div>
-                      <div class="h-1 bg-gray-300 rounded w-3/4 mt-1"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-full"></div>
-                      <div class="h-1 bg-gray-200 rounded w-1/2"></div>
-                    </div>
-                    <div class="p-3">
-                      <h3 class="font-bold text-xs text-navy-accent">Créative</h3>
-                      <p class="text-[10px] text-gray-400">Moderne avec accents</p>
-                    </div>
-                    <button
-                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                      data-template="creative" data-type="letter" title="Aperçu">
-                      <span class="material-symbols-outlined text-sm">zoom_in</span>
-                    </button>
-                  </div>
-                  <div
-                    class="template-card group relative cursor-pointer rounded-2xl bg-white border-2 border-transparent shadow-sm overflow-hidden transition-all hover:shadow-lg hover:border-primary/30"
-                    data-template="elegant">
-                    <div
-                      class="template-preview template-preview-elegant aspect-[3/4] bg-gray-50 p-3 flex flex-col items-center gap-1.5 pt-4 relative">
-                      <div class="absolute inset-1 border border-gray-300 rounded pointer-events-none"></div>
-                      <div class="h-1 bg-gray-400 rounded w-1/2 relative z-10"></div>
-                      <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
-                      <div class="h-1 bg-gray-200 rounded w-3/4 relative z-10"></div>
-                    </div>
-                    <div class="p-3">
-                      <h3 class="font-bold text-xs text-navy-accent">Élégante</h3>
-                      <p class="text-[10px] text-gray-400">Raffinée avec bordures</p>
-                    </div>
-                    <button
-                      class="template-preview-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 size-7 bg-white/90 rounded-full flex items-center justify-center text-primary shadow transition-opacity"
-                      data-template="elegant" data-type="letter" title="Aperçu">
-                      <span class="material-symbols-outlined text-sm">zoom_in</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Footer Actions -->
-              <div class="flex items-center justify-between border-t border-gray-200 pt-6">
-                <button id="prevStep2"
-                  class="group flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-gray-500 transition-colors hover:bg-white hover:text-navy-accent">
-                  <span
-                    class="material-symbols-outlined transition-transform group-hover:-translate-x-1">arrow_back</span>
-                  Retour
-                </button>
-                <button id="generateBtn"
-                  class="flex items-center gap-2 rounded-xl bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/30 transition-all hover:bg-primary-dark hover:shadow-primary/40 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed generate-glow"
-                  disabled>
-                  <span class="material-symbols-outlined text-lg">auto_awesome</span>
-                  Adapter mon CV avec l'IA
-                </button>
-              </div>
-            </div>
-        </section>
-
-        <!-- ====================================================== -->
-        <!-- STEP 3: RESULTS                                        -->
-        <!-- ====================================================== -->
-        <section id="step3" class="step-content">
-          <!-- Loading State -->
-          <div id="loadingState" class="hidden">
-            <div class="glass-panel rounded-2xl shadow-2xl overflow-hidden p-8 md:p-10 relative">
-              <div class="absolute inset-0 opacity-20 pointer-events-none">
-                <div
-                  class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent">
-                </div>
-              </div>
-              <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-                <!-- Left: Orb -->
-                <div class="flex flex-col items-center justify-center">
-                  <div class="relative w-52 h-52 md:w-64 md:h-64 flex items-center justify-center">
-                    <div
-                      class="absolute inset-0 rounded-full border border-primary/20 animate-[spin_10s_linear_infinite]">
-                    </div>
-                    <div
-                      class="absolute inset-4 rounded-full border border-dashed border-primary/30 animate-[spin_15s_linear_infinite_reverse]">
-                    </div>
-                    <div class="absolute inset-0 rounded-full bg-primary/5 animate-pulse"></div>
-                    <div
-                      class="absolute inset-0 rounded-full bg-primary/15 animate-[ping_3s_cubic-bezier(0,0,.2,1)_infinite]">
-                    </div>
-                    <div
-                      class="relative w-28 h-28 md:w-36 md:h-36 bg-gradient-to-tr from-primary to-purple-400 rounded-full flex items-center justify-center shadow-[0_0_50px_15px_rgba(107,91,230,0.3)] animate-float">
-                      <span class="material-symbols-outlined text-white text-5xl animate-pulse">neurology</span>
-                      <div class="absolute top-3 left-3 w-7 h-7 bg-white/30 rounded-full blur-md"></div>
-                    </div>
-                  </div>
-                </div>
-                <!-- Right: Status -->
-                <div class="flex flex-col gap-5">
-                  <div>
-                    <h3 id="loadingTitle" class="text-2xl md:text-3xl font-black text-navy-accent tracking-tight mb-2">
-                      L'IA analyse votre CV et l'offre...</h3>
-                    <p id="loadingSubtitle" class="text-gray-500 text-base">Cela peut prendre quelques secondes</p>
-                  </div>
-                  <!-- Progress Bar -->
-                  <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                    <div id="loadingProgressBar"
-                      class="bg-primary h-1.5 rounded-full shadow-[0_0_10px_rgba(107,91,230,0.5)] transition-all duration-500"
-                      style="width:0%"></div>
-                  </div>
-                  <!-- Checklist -->
-                  <div class="space-y-3">
-                    <div id="loadingStep1"
-                      class="loading-step flex items-center gap-3 p-3 rounded-lg bg-white/30 border border-transparent transition-all">
-                      <div
-                        class="loading-step-icon flex-shrink-0 size-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
-                        <span class="material-symbols-outlined text-base">radio_button_unchecked</span>
-                      </div>
-                      <span class="text-sm font-medium text-gray-500">Analyse du CV et de l'offre</span>
-                    </div>
-                    <div id="loadingStep2"
-                      class="loading-step flex items-center gap-3 p-3 rounded-lg bg-white/30 border border-transparent transition-all">
-                      <div
-                        class="loading-step-icon flex-shrink-0 size-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
-                        <span class="material-symbols-outlined text-base">radio_button_unchecked</span>
-                      </div>
-                      <span class="text-sm font-medium text-gray-500">Adaptation du contenu</span>
-                    </div>
-                    <div id="loadingStep3"
-                      class="loading-step flex items-center gap-3 p-3 rounded-lg bg-white/30 border border-transparent transition-all">
-                      <div
-                        class="loading-step-icon flex-shrink-0 size-7 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
-                        <span class="material-symbols-outlined text-base">radio_button_unchecked</span>
-                      </div>
-                      <span class="text-sm font-medium text-gray-500">Lettre de motivation</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div id="resultsState" class="hidden">
+          <div class="results-heading">
+            <div><p class="eyebrow">Candidature prête</p><h1>Deux documents.<br><em>Un même objectif.</em></h1></div>
+            <span class="success-seal"><span class="material-symbols-rounded">check</span> Adapté à l’offre</span>
           </div>
 
-          <!-- Results -->
-          <div id="resultsState" class="hidden">
-            <!-- Header -->
-            <div class="text-center space-y-3 max-w-2xl mx-auto mb-8">
-              <div
-                class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-100/50 text-green-700 rounded-full text-xs font-semibold border border-green-200 backdrop-blur-sm">
-                <span class="material-symbols-outlined text-base">check_circle</span>
-                Analyse terminée
+          <div class="results-grid">
+            <article class="document-result">
+              <div class="document-title"><span class="material-symbols-rounded">description</span><div><h2>CV adapté</h2><span>Optimisé pour les recruteurs et ATS</span></div></div>
+              <div id="adaptedCVPreview" class="result-preview"></div>
+              <details class="result-options">
+                <summary>Changer le style <span class="material-symbols-rounded">expand_more</span></summary>
+                <div id="resultCVTemplateSwitcher" class="result-switcher">
+                  <button class="result-tpl-btn active" data-tpl="classic">Clair</button><button class="result-tpl-btn" data-tpl="modern">Moderne</button><button class="result-tpl-btn" data-tpl="minimal">Minimal</button><button class="result-tpl-btn" data-tpl="executive">Exécutif</button><button class="result-tpl-btn" data-tpl="bold">Créatif</button>
+                </div>
+              </details>
+              <div class="result-actions">
+                <button id="previewCVCode" class="secondary-button" type="button"><span class="material-symbols-rounded">visibility</span> Aperçu</button>
+                <button id="downloadCV" class="primary-button" type="button"><span class="material-symbols-rounded">download</span> Télécharger</button>
               </div>
-              <h2 class="text-3xl md:text-4xl font-black text-navy-accent tracking-tight leading-[1.1]">
-                Votre dossier de candidature est prêt.
-              </h2>
-            </div>
-            <!-- Results Grid -->
-            <div class="results-grid grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-              <!-- CV Card -->
-              <div
-                class="group relative flex flex-col glass-panel rounded-2xl p-5 transition-all duration-300 hover:bg-white/85 hover:-translate-y-1 hover:shadow-glass-hover border-t-4 border-t-primary">
-                <div class="absolute -top-2.5 right-5">
-                  <span
-                    class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-navy-accent text-white text-[10px] font-bold uppercase tracking-wider rounded-full shadow-lg">
-                    <span class="material-symbols-outlined text-xs text-green-400">verified</span>
-                    Optimisé ATS
-                  </span>
-                </div>
-                <div class="flex items-center gap-3 mb-4">
-                  <div class="size-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
-                    <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold text-navy-accent">CV Adapté</h3>
-                  </div>
-                </div>
-                <div id="adaptedCVPreview"
-                  class="result-preview flex-1 bg-white/50 rounded-lg p-4 text-xs text-gray-600 max-h-64 overflow-auto border border-white/40 mb-4">
-                </div>
-                <div class="flex flex-col gap-2 mt-auto">
-                  <!-- Template Switcher for CV -->
-                  <div class="flex items-center gap-1.5 flex-wrap mb-1" id="resultCVTemplateSwitcher">
-                    <span class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider w-full mb-0.5">Modèle
-                      :</span>
-                    <button class="result-tpl-btn active" data-tpl="classic">Classique</button>
-                    <button class="result-tpl-btn" data-tpl="modern">Moderne</button>
-                    <button class="result-tpl-btn" data-tpl="minimal">Minimal</button>
-                    <button class="result-tpl-btn" data-tpl="executive">Exécutif</button>
-                    <button class="result-tpl-btn" data-tpl="bold">Créatif</button>
-                    <button class="result-tpl-btn" data-tpl="twentysecond">Créatif 2</button>
-                    <button class="result-tpl-btn" data-tpl="altacv">AltaCV · LuaLaTeX</button>
-                    <button class="result-tpl-btn" data-tpl="maltacv">MaltaCV · LuaLaTeX</button>
-                    <button class="result-tpl-btn" data-tpl="mycv">MyCV · pdfLaTeX</button>
-                  </div>
-                  <button id="previewCVCode"
-                    class="w-full flex items-center justify-center gap-2 h-10 bg-white hover:bg-gray-50 text-primary font-semibold rounded-xl border border-primary/20 transition-all active:scale-95">
-                    <span class="material-symbols-outlined text-sm">visibility</span>
-                    Aperçu PDF (LaTeX)
-                  </button>
-                  <button id="downloadCV"
-                    class="w-full flex items-center justify-center gap-2 h-11 bg-primary hover:bg-primary-light text-white font-semibold rounded-xl transition-all shadow-glow hover:shadow-lg hover:shadow-primary/40 active:scale-95">
-                    <span class="material-symbols-outlined">download</span>
-                    Télécharger le CV (.tex)
-                  </button>
-                </div>
-              </div>
-              <!-- Cover Letter Card -->
-              <div
-                class="group relative flex flex-col glass-panel rounded-2xl p-5 transition-all duration-300 hover:bg-white/85 hover:-translate-y-1 hover:shadow-glass-hover border-t-4 border-t-purple-400">
-                <div class="absolute -top-2.5 right-5">
-                  <span
-                    class="inline-flex items-center gap-1 px-2.5 py-0.5 bg-white text-primary text-[10px] font-bold uppercase tracking-wider rounded-full shadow-md border border-primary/20">
-                    <span class="material-symbols-outlined text-xs">psychology</span>
-                    Personnalisée
-                  </span>
-                </div>
-                <div class="flex items-center gap-3 mb-4">
-                  <div class="size-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                    <span class="material-symbols-outlined text-2xl">mail</span>
-                  </div>
-                  <div>
-                    <h3 class="text-lg font-bold text-navy-accent">Lettre de Motivation</h3>
-                  </div>
-                </div>
-                <div id="coverLetterPreview"
-                  class="result-preview flex-1 bg-white/50 rounded-lg p-4 text-xs text-gray-600 max-h-64 overflow-auto border border-white/40 mb-4">
-                </div>
-                <div class="flex flex-col gap-2 mt-auto">
-                  <button id="previewCoverLetterCode"
-                    class="w-full flex items-center justify-center gap-2 h-10 bg-white hover:bg-gray-50 text-navy-accent font-semibold rounded-xl border border-gray-200 transition-all active:scale-95">
-                    <span class="material-symbols-outlined text-sm">visibility</span>
-                    Aperçu PDF (LaTeX)
-                  </button>
-                  <button id="downloadCoverLetter"
-                    class="w-full flex items-center justify-center gap-2 h-11 bg-navy-accent hover:bg-navy-accent/90 text-white font-semibold rounded-xl transition-all active:scale-95">
-                    <span class="material-symbols-outlined">download</span>
-                    Télécharger la Lettre (.tex)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+            </article>
 
-          <!-- New Adaptation Button -->
-          <div id="newAdaptation" class="hidden mt-6 flex justify-center gap-3">
-            <button id="startOverBtn"
-              class="text-gray-500 hover:text-primary text-sm font-medium flex items-center gap-2 transition-colors">
-              <span class="material-symbols-outlined text-lg">refresh</span>
-              Nouvelle adaptation
-            </button>
-            <button id="viewHistoryBtn"
-              class="text-gray-500 hover:text-primary text-sm font-medium flex items-center gap-2 transition-colors">
-              <span class="material-symbols-outlined text-lg">history</span>
-              Historique
-            </button>
+            <article class="document-result letter-result">
+              <div class="document-title"><span class="material-symbols-rounded">draft</span><div><h2>Lettre de motivation</h2><span>Personnalisée pour l’entreprise</span></div></div>
+              <div id="coverLetterPreview" class="result-preview"></div>
+              <div class="result-actions">
+                <button id="previewCoverLetterCode" class="secondary-button" type="button"><span class="material-symbols-rounded">visibility</span> Aperçu</button>
+                <button id="downloadCoverLetter" class="primary-button dark" type="button"><span class="material-symbols-rounded">download</span> Télécharger</button>
+              </div>
+            </article>
           </div>
-        </section>
-      </div>
+        </div>
+
+        <div id="newAdaptation" class="hidden next-actions">
+          <button id="startOverBtn" class="primary-button" type="button"><span class="material-symbols-rounded">add</span> Nouvelle offre</button>
+          <button id="viewHistoryBtn" class="secondary-button" type="button"><span class="material-symbols-rounded">history</span> Historique</button>
+        </div>
+      </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="relative z-10 text-center py-5 text-xs text-gray-400">
-      <span class="font-semibold">AdaptaCV</span>
-      <span class="mx-1.5">&bull;</span>
-      <span class="inline-flex items-center gap-1">
-        <span class="material-symbols-outlined text-xs">lock</span>
-        Donn&eacute;es stock&eacute;es localement uniquement
-      </span>
-    </footer>
+    <footer><span>AdaptaCV</span><span>Profil mémorisé localement · génération via le modèle choisi</span></footer>
 
-    <!-- Template Preview Modal -->
-    <div id="templatePreviewModal" class="modal-overlay hidden">
-      <div class="glass-panel w-[90%] max-w-lg rounded-2xl shadow-2xl">
-        <div class="flex items-center justify-between p-5 pb-0">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-primary text-xl">visibility</span>
-            <h2 id="previewModalTitle" class="font-display text-lg font-bold">Aperçu du modèle</h2>
-          </div>
-          <button id="closePreviewBtn"
-            class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-            <span class="material-symbols-outlined text-xl">close</span>
-          </button>
-        </div>
-        <div class="p-5">
-          <div id="templatePreviewContent" class="template-preview-full rounded-lg overflow-hidden"></div>
-        </div>
-        <div class="p-5 pt-0">
-          <button id="previewSelectBtn"
-            class="w-full flex items-center justify-center gap-2 h-10 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-95">
-            <span class="material-symbols-outlined text-lg">check</span>
-            Sélectionner ce modèle
-          </button>
+    <div id="settingsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-card compact-modal">
+        <div class="modal-header"><div><span class="material-symbols-rounded">tune</span><h2 id="settingsTitle">Réglages IA</h2></div><button id="closeSettingsBtn" class="icon-button" type="button" aria-label="Fermer"><span class="material-symbols-rounded">close</span></button></div>
+        <div class="modal-body form-stack">
+          <label for="aiProvider">Modèle<select id="aiProvider"><option value="groq">Groq | Llama 3.3 70B</option><option value="gemini">Google Gemini 2.5 Flash</option><option value="mistral">Mistral Small</option></select></label>
+          <label for="apiKey">Clé API<div class="password-field"><input type="password" id="apiKey" placeholder="Votre clé API" /><button id="toggleApiKey" class="icon-button" type="button" aria-label="Afficher la clé"><span class="material-symbols-rounded">visibility</span></button></div></label>
+          <div class="api-links"><a id="helpLinkGroq" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">Obtenir une clé Groq</a><a id="helpLinkGemini" class="hidden" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Obtenir une clé Gemini</a><a id="helpLinkMistral" class="hidden" href="https://console.mistral.ai/api-keys" target="_blank" rel="noreferrer">Obtenir une clé Mistral</a></div>
+          <label for="language">Langue<select id="language"><option value="fr">Français</option><option value="en">English</option></select></label>
+          <button id="saveSettings" class="primary-button full-width" type="button">Enregistrer</button>
         </div>
       </div>
     </div>
 
-    <!-- LaTeX Compilation Preview Modal -->
-    <div id="latexCodeModal" class="modal-overlay hidden">
-      <div class="glass-panel w-[90%] max-w-5xl h-[90vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden">
-        <div class="flex items-center justify-between p-4 border-b border-gray-200/50 bg-white/50">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-primary text-xl">picture_as_pdf</span>
-            <h2 class="font-display text-lg font-bold">Aperçu du PDF (compilation LaTeX)</h2>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="closeLatexModalBtn"
-              class="flex size-8 items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-              <span class="material-symbols-outlined text-xl">close</span>
-            </button>
-          </div>
-        </div>
-        <div class="flex-1 overflow-hidden relative bg-gray-100">
-          <div id="latexLoading"
-            class="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 z-10 transition-opacity">
-            <span class="material-symbols-outlined text-4xl text-primary animate-spin mb-3">refresh</span>
-            <p class="text-gray-500 font-medium">Compilation LaTeX en cours...</p>
-            <p class="text-xs text-gray-400 mt-2">Cela peut prendre quelques secondes.</p>
-          </div>
-          <form id="latexForm" action="https://texlive.net/cgi-bin/latexcgi" method="POST" enctype="multipart/form-data"
-            target="latexIframe" class="hidden">
-            <textarea name="filecontents[]" id="latexInput"></textarea>
-            <input type="hidden" name="filename[]" value="document.tex">
-            <input type="hidden" name="engine" value="pdflatex">
-            <input type="hidden" name="return" value="pdf">
-          </form>
-          <iframe name="latexIframe" id="latexIframe" class="w-full h-full border-0 relative z-20"
-            onload="document.getElementById('latexLoading').style.opacity = '0'; pointerEvents = 'none';"></iframe>
-        </div>
+    <div id="historyModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+      <div class="modal-card history-modal">
+        <div class="modal-header"><div><span class="material-symbols-rounded">history</span><h2 id="historyTitle">Historique</h2></div><div><button id="clearHistoryBtn" class="subtle-button danger-text" type="button">Tout effacer</button><button id="closeHistoryBtn" class="icon-button" type="button" aria-label="Fermer"><span class="material-symbols-rounded">close</span></button></div></div>
+        <div id="historyList" class="history-list"><div id="historyEmpty" class="empty-state"><span class="material-symbols-rounded">folder_open</span><strong>Aucune candidature</strong><span>Vos créations apparaîtront ici.</span></div></div>
       </div>
     </div>
 
-    <!-- Toast Notifications -->
-    <div id="toastContainer" class="toast-container fixed bottom-6 right-6 z-[300] space-y-2"></div>
+    <div id="templatePreviewModal" class="modal-overlay hidden"><div class="modal-card"><div class="modal-header"><h2 id="previewModalTitle">Aperçu</h2><button id="closePreviewBtn" class="icon-button" type="button"><span class="material-symbols-rounded">close</span></button></div><div id="templatePreviewContent" class="modal-body"></div><button id="previewSelectBtn" class="primary-button">Choisir</button></div></div>
 
-    <!-- Confetti Canvas -->
-    <canvas id="confettiCanvas" class="fixed inset-0 z-[400] pointer-events-none"></canvas>
+    <div id="latexCodeModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+      <div class="modal-card preview-modal">
+        <div class="modal-header"><div><span class="material-symbols-rounded">picture_as_pdf</span><h2>Aperçu du document</h2></div><button id="closeLatexModalBtn" class="icon-button" type="button" aria-label="Fermer"><span class="material-symbols-rounded">close</span></button></div>
+        <div class="preview-frame"><div id="latexLoading" class="preview-loading"><span class="material-symbols-rounded">progress_activity</span><p>Création de l’aperçu...</p></div><form id="latexForm" action="https://texlive.net/cgi-bin/latexcgi" method="POST" enctype="multipart/form-data" target="latexIframe" class="hidden"><textarea name="filecontents[]" id="latexInput"></textarea><input type="hidden" name="filename[]" value="document.tex" /><input type="hidden" name="engine" value="pdflatex" /><input type="hidden" name="return" value="pdf" /></form><iframe name="latexIframe" id="latexIframe" title="Aperçu PDF"></iframe></div>
+      </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+    <canvas id="confettiCanvas" class="confetti-canvas"></canvas>
   </div>
-
   <script type="module" src="/src/main.js"></script>
 </body>
-
 </html>

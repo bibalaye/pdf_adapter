@@ -36,6 +36,8 @@ const state = {
   letterTemplate: 'formal',
 };
 
+const SAVED_CV_KEY = 'adaptacv_source_profile';
+
 // ============================================================
 // DOM References
 // ============================================================
@@ -62,6 +64,7 @@ const manualCVText = $('#manualCVText');
 const manualCharCount = $('#manualCharCount');
 const removeFileBtn = $('#removeFile');
 const nextStep1Btn = $('#nextStep1');
+const extractionStatus = $('#extractionStatus');
 
 // Step 2
 const profilePhotoSection = $('#profilePhotoSection');
@@ -74,6 +77,9 @@ const jobDescriptionInput = $('#jobDescription');
 const jobDescCount = $('#jobDescCount');
 const prevStep2Btn = $('#prevStep2');
 const generateBtn = $('#generateBtn');
+const changeCVBtn = $('#changeCVBtn');
+const savedCVName = $('#savedCVName');
+const savedCVMeta = $('#savedCVMeta');
 const cvTemplateGrid = $('#cvTemplateGrid');
 const letterTemplateGrid = $('#letterTemplateGrid');
 const templatePreviewModal = $('#templatePreviewModal');
@@ -148,6 +154,7 @@ function init() {
   initParticles();
   refreshLucideIcons();
   updateHistoryBadge();
+  restoreSavedCV();
 }
 
 function loadSettings() {
@@ -289,6 +296,12 @@ function setupEventListeners() {
       fileInput.click();
     }
   });
+  dropZone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
   fileInput.addEventListener('click', () => {
     // Reset value so selecting the same file again still triggers 'change'
     fileInput.value = '';
@@ -331,15 +344,25 @@ function setupEventListeners() {
   nextStep1Btn.addEventListener('click', () => {
     if (state.isImageBased && manualCVText.value.trim()) {
       state.extractedText = manualCVText.value.trim();
+      saveSourceProfile('Texte saisi', state.extractedText, 0, 'manuel');
     }
     goToStep(2);
   });
 
   prevStep2Btn.addEventListener('click', () => goToStep(1));
+  if (changeCVBtn) changeCVBtn.addEventListener('click', () => {
+    resetFile();
+    goToStep(1);
+  });
   startOverBtn.addEventListener('click', () => {
     state.adaptedCV = null;
     state.coverLetter = null;
-    goToStep(1);
+    jobTitleInput.value = '';
+    companyNameInput.value = '';
+    jobDescriptionInput.value = '';
+    jobDescCount.textContent = '0 caractère';
+    updateGenerateButton();
+    goToStep(state.extractedText ? 2 : 1);
   });
 
   // --- Job Description ---
@@ -404,6 +427,12 @@ function setupEventListeners() {
   if (latexCodeModal) latexCodeModal.addEventListener('click', (e) => {
     if (e.target === latexCodeModal) latexCodeModal.classList.add('hidden');
   });
+  if (latexIframe) latexIframe.addEventListener('load', () => {
+    if (latexIframe.dataset.pending === 'true') {
+      latexLoading.style.opacity = '0';
+      delete latexIframe.dataset.pending;
+    }
+  });
 
   // --- Settings ---
   settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
@@ -454,6 +483,8 @@ function setupEventListeners() {
     if (e.key === 'Escape') {
       settingsModal.classList.add('hidden');
       historyModal.classList.add('hidden');
+      templatePreviewModal?.classList.add('hidden');
+      latexCodeModal?.classList.add('hidden');
     }
   });
 }
@@ -519,7 +550,8 @@ async function handleFileUpload(file) {
 
   extractedTextContainer.classList.remove('hidden');
   manualInputContainer.classList.add('hidden');
-  extractedTextEl.textContent = '⏳ Extraction du texte en cours...';
+  setExtractionStatus('Lecture du CV', 'Préparation...', false);
+  extractedTextEl.textContent = '';
   charCount.textContent = '';
   nextStep1Btn.disabled = true;
 
@@ -530,22 +562,20 @@ async function handleFileUpload(file) {
     const result = await extractTextFromPDF(file, (status) => {
       switch (status.phase) {
         case 'text':
-          extractedTextEl.textContent = '📄 Extraction du texte standard...';
+          setExtractionStatus('Lecture du CV', 'Extraction du texte...', false);
           break;
         case 'ocr-init':
-          extractedTextEl.textContent = '🔍 PDF basé images détecté !\n\n⏳ Chargement OCR (Tesseract.js)...';
-          charCount.textContent = 'OCR en cours...';
-          showToast('PDF design détecté → OCR automatique lancé', 'info', 5000);
+          setExtractionStatus('OCR en cours', 'Initialisation...', false);
+          showToast('Le mode OCR prend le relais.', 'info', 5000);
           break;
         case 'ocr-page':
-          extractedTextEl.textContent = `🔍 OCR en cours...\n\n📃 Page ${status.page}/${status.totalPages}\n⏳ ${status.progress}%`;
-          charCount.textContent = `Page ${status.page}/${status.totalPages}`;
+          setExtractionStatus('OCR en cours', `Page ${status.page} sur ${status.totalPages}`, false);
           break;
         case 'ocr-recognize':
-          extractedTextEl.textContent = `🔍 Reconnaissance page ${status.page}/${status.totalPages}\n⏳ ${status.progress}%`;
+          setExtractionStatus('OCR en cours', `Page ${status.page} · ${status.progress}%`, false);
           break;
         case 'ocr-done':
-          extractedTextEl.textContent = '✅ OCR terminé !';
+          setExtractionStatus('Profil extrait', 'OCR terminé', true);
           break;
       }
     });
@@ -560,9 +590,10 @@ async function handleFileUpload(file) {
       extractedTextEl.textContent = result.text;
 
       const methodLabel = result.method === 'ocr' ? 'OCR' : 'texte';
-      charCount.textContent = `${result.text.length} car. • ${result.numPages} page${result.numPages > 1 ? 's' : ''} • ${methodLabel}`;
+      setExtractionStatus('Profil prêt', `${result.numPages} page${result.numPages > 1 ? 's' : ''} · ${methodLabel}`, true);
       nextStep1Btn.disabled = false;
-      showToast(`CV extrait ${result.method === 'ocr' ? 'via OCR' : ''} ! (${result.text.length} car.)`, 'success');
+      saveSourceProfile(file.name, result.text, result.numPages, result.method, file.size);
+      showToast('Votre profil est prêt et mémorisé localement.', 'success');
     } else {
       state.isImageBased = true;
       extractedTextContainer.classList.add('hidden');
@@ -608,6 +639,64 @@ function resetFile() {
   extractedTextContainer.classList.remove('hidden');
   manualInputContainer.classList.add('hidden');
   nextStep1Btn.disabled = true;
+  localStorage.removeItem(SAVED_CV_KEY);
+  updateSavedCVSummary();
+}
+
+function setExtractionStatus(title, detail, done) {
+  if (!extractionStatus) return;
+  extractionStatus.classList.toggle('is-done', done);
+  extractionStatus.classList.toggle('is-loading', !done);
+  const titleEl = extractionStatus.querySelector('strong');
+  if (titleEl) titleEl.textContent = title;
+  charCount.textContent = detail;
+}
+
+function saveSourceProfile(name, text, numPages, method, size = 0) {
+  const source = { name, text, numPages, method, size, savedAt: new Date().toISOString() };
+  try {
+    localStorage.setItem(SAVED_CV_KEY, JSON.stringify(source));
+    updateSavedCVSummary(source);
+  } catch (error) {
+    console.warn('Source profile storage full', error);
+    showToast('Le profil est utilisable, mais la mémoire locale est pleine.', 'info');
+  }
+}
+
+function getSavedCV() {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_CV_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function restoreSavedCV() {
+  const source = getSavedCV();
+  if (!source?.text || source.text.length < 30) return;
+
+  state.extractedText = source.text;
+  state.numPages = source.numPages || 0;
+  state.isImageBased = source.method === 'ocr';
+  fileName.textContent = source.name || 'CV enregistré';
+  fileSize.textContent = source.size ? formatFileSize(source.size) : 'Profil extrait';
+  extractedTextEl.textContent = source.text;
+  dropZone.classList.add('hidden');
+  filePreview.classList.remove('hidden');
+  extractedTextContainer.classList.remove('hidden');
+  pdfPreviewContainer.classList.add('hidden');
+  setExtractionStatus('Profil prêt', `${source.numPages || 1} page${source.numPages > 1 ? 's' : ''} · local`, true);
+  nextStep1Btn.disabled = false;
+  updateSavedCVSummary(source);
+  goToStep(2);
+}
+
+function updateSavedCVSummary(source = getSavedCV()) {
+  if (!savedCVName || !savedCVMeta) return;
+  savedCVName.textContent = source?.name || 'Aucun CV enregistré';
+  savedCVMeta.textContent = source?.text
+    ? `${source.numPages || 1} page${source.numPages > 1 ? 's' : ''} · disponible localement`
+    : 'Ajoutez un CV pour commencer';
 }
 
 // ============================================================
@@ -744,7 +833,7 @@ async function handleGenerate() {
     newAdaptation.classList.remove('hidden');
 
     refreshLucideIcons();
-    showToast('CV adapté et lettre de motivation générés ! 🎉', 'success');
+    showToast('Votre candidature est prête.', 'success');
     launchConfetti();
 
   } catch (err) {
@@ -782,31 +871,31 @@ function renderResults() {
 
     if (cv.matchScore) {
       const sc = cv.matchScore;
-      const col = sc >= 75 ? '#00b894' : sc >= 50 ? '#fdcb6e' : '#d63031';
+      const col = sc >= 75 ? '#2e6b4f' : sc >= 50 ? '#8a6a2d' : '#a84242';
       html += `<div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-        <strong>🎯 Score :</strong>
+        <strong>Score de correspondance</strong>
         <span style="background:${col}14;color:${col};padding:3px 12px;border-radius:20px;font-weight:700;font-size:0.88em;border:1px solid ${col}25;">${sc}%</span>
       </div>`;
     }
 
     if (cv.summary) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">📋 Résumé</strong><br><span style="color:var(--text-secondary);font-style:italic;font-size:0.88em;line-height:1.7;">${esc(cv.summary)}</span></div>`;
+      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Profil</strong><br><span style="color:var(--text-secondary);font-size:0.88em;line-height:1.7;">${esc(cv.summary)}</span></div>`;
     }
 
     if (cv.keySkills?.length) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">🔧 Compétences</strong><div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">`;
+      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Compétences</strong><div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">`;
       for (const s of cv.keySkills) {
-        html += `<span style="display:inline-block;background:rgba(108,92,231,0.06);color:var(--accent-primary);padding:3px 10px;border-radius:20px;font-size:0.76em;border:1px solid rgba(108,92,231,0.15);">${esc(s)}</span>`;
+        html += `<span style="display:inline-block;background:#edf3ee;color:var(--accent-primary);padding:3px 10px;border-radius:20px;font-size:0.76em;border:1px solid #ceddd2;">${esc(s)}</span>`;
       }
       html += `</div></div>`;
     }
 
     if (cv.experience?.length) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">💼 Expérience</strong>`;
+      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Expérience</strong>`;
       for (const exp of cv.experience) {
-        html += `<div style="margin-top:10px;padding-left:12px;border-left:2px solid rgba(108,92,231,0.2);">
+        html += `<div style="margin-top:10px;padding-left:12px;border-left:2px solid #ceddd2;">
           <strong style="color:var(--text-primary);font-size:0.92em;">${esc(exp.title || '')}</strong>
-          <div style="color:var(--accent-primary);font-size:0.82em;">${esc(exp.company || '')} ${exp.period ? '— ' + esc(exp.period) : ''}</div>`;
+          <div style="color:var(--accent-primary);font-size:0.82em;">${esc(exp.company || '')} ${exp.period ? '· ' + esc(exp.period) : ''}</div>`;
         if (exp.bullets?.length) {
           html += '<ul style="margin:6px 0 0 16px;color:var(--text-secondary);font-size:0.85em;">';
           for (const b of exp.bullets) html += `<li style="margin-bottom:3px;">${esc(b)}</li>`;
@@ -818,18 +907,18 @@ function renderResults() {
     }
 
     if (cv.education?.length) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:#0984e3;">🎓 Formation</strong>`;
+      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Formation</strong>`;
       for (const edu of cv.education) {
-        html += `<div style="margin-top:6px;padding-left:12px;border-left:2px solid rgba(9,132,227,0.2);">
+        html += `<div style="margin-top:6px;padding-left:12px;border-left:2px solid #ceddd2;">
           <strong style="color:var(--text-primary);font-size:0.9em;">${esc(edu.degree || '')}</strong>
-          <div style="color:#0984e3;font-size:0.82em;">${esc(edu.school || '')} ${edu.period ? '— ' + esc(edu.period) : ''}</div>
+          <div style="color:var(--accent-primary);font-size:0.82em;">${esc(edu.school || '')} ${edu.period ? '· ' + esc(edu.period) : ''}</div>
         </div>`;
       }
       html += '</div>';
     }
 
     if (cv.addedKeywords?.length) {
-      html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);"><strong style="color:var(--text-muted);font-size:0.78em;">🏷️ Mots-clés ATS</strong><br><em style="color:var(--text-muted);font-size:0.76em;">${cv.addedKeywords.map(k => esc(k)).join(' • ')}</em></div>`;
+      html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);"><strong style="color:var(--text-muted);font-size:0.78em;">Mots-clés ATS</strong><br><span style="color:var(--text-muted);font-size:0.76em;">${cv.addedKeywords.map(k => esc(k)).join(' · ')}</span></div>`;
     }
 
     adaptedCVPreview.innerHTML = html;
@@ -948,7 +1037,10 @@ async function handlePreviewCVCode() {
     }
 
     latexCodeModal.classList.remove('hidden');
-    setTimeout(() => latexForm.submit(), 200);
+    setTimeout(() => {
+      latexIframe.dataset.pending = 'true';
+      latexForm.submit();
+    }, 200);
 
   } catch (err) {
     console.error('Preview error:', err);
@@ -968,6 +1060,7 @@ function handlePreviewCoverLetterCode() {
     latexLoading.style.opacity = '1';
     latexCodeModal.classList.remove('hidden');
     setTimeout(() => {
+        latexIframe.dataset.pending = 'true';
         latexForm.submit();
     }, 100);
   } catch (err) {
@@ -1138,6 +1231,8 @@ function renderHistoryList() {
       state.adaptedCV = entry.adaptedCV;
       state.coverLetter = entry.coverLetter;
       state.cvTemplate = entry.cvTemplate || 'classic';
+      jobTitleInput.value = entry.jobTitle || '';
+      companyNameInput.value = entry.companyName || '';
       historyModal.classList.add('hidden');
       // Sync template switcher
       syncResultTemplateSwitcher(state.cvTemplate);

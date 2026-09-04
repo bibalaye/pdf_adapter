@@ -22,15 +22,15 @@ export function showToast(message, type = 'info', duration = 4000) {
     if (!container) return;
 
     const icons = {
-        success: '✅',
-        error: '❌',
-        info: 'ℹ️',
+        success: 'check_circle',
+        error: 'error',
+        info: 'info',
     };
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `
-    <span>${icons[type] || ''}</span>
+    <span class="material-symbols-rounded">${icons[type] || 'info'}</span>
     <span>${message}</span>
   `;
 
