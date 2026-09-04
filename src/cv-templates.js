@@ -27,7 +27,7 @@ function escapeLatexArray(arr) {
 /**
  * Standard templates (Classic, Modern, Executive, Bold)
  */
-export function generateStandardTemplate(cvData, candidateName, template = 'classic') {
+export function generateStandardTemplate(cvData, candidateName, template = 'classic', profilePhotoLatex = '') {
     const pi = cvData.personalInfo || {};
     const name = pi.fullName || candidateName || 'Candidat';
 
@@ -51,6 +51,7 @@ export function generateStandardTemplate(cvData, candidateName, template = 'clas
 \\usepackage{enumitem}
 \\usepackage{hyperref}
 \\usepackage{parskip}
+${profilePhotoLatex ? '\\usepackage{tikz}' : ''}
 
 \\definecolor{primary}{RGB}{${primaryColor}}
 \\definecolor{textdark}{RGB}{50, 50, 50}
@@ -73,6 +74,7 @@ export function generateStandardTemplate(cvData, candidateName, template = 'clas
 \\pagestyle{empty}
 
 {\\begin{center}
+${profilePhotoLatex ? `${profilePhotoLatex} \\\\[0.2cm]` : ''}
 {\\Huge \\bfseries \\color{textdark} ${escapeLatex(name)}} \\\\[0.2cm]
 `;
 
@@ -560,9 +562,17 @@ export function generateCoverLetterTemplate(letterData, candidateName, jobTitle,
     const dateStr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     const subject = letterData.subject || (jobTitle ? `Candidature au poste de ${jobTitle}` : '');
     
-    const letterContent = letterData.fullText || 
-        [letterData.greeting, '', letterData.opening, '', letterData.body, '', letterData.closing, '', letterData.signature]
-            .filter(p => p !== undefined).join('\n\n');
+    const greetingPattern = /^\s*(?:(?:bonjour\s+)?madame\s*[,/&-]?\s*monsieur|(?:bonjour\s+)?monsieur\s*[,/&-]?\s*madame|madame|monsieur)[\s,:-]*/i;
+    const signoffPattern = /\s*(?:bien\s+)?cordialement[,.]?\s*(?:\n\s*[^\n]{2,80})?\s*$/i;
+    const cleanPart = (value) => String(value || '').replace(greetingPattern, '').replace(signoffPattern, '').trim();
+    const rawGreeting = String(letterData.greeting || '').trim();
+    const greeting = /(?:madame|monsieur).*(?:madame|monsieur)/i.test(rawGreeting)
+        ? 'Madame, Monsieur,'
+        : rawGreeting.split('\n')[0] || 'Madame, Monsieur,';
+    const letterContent = [letterData.opening, letterData.body, letterData.closing]
+        .map(cleanPart)
+        .filter(Boolean)
+        .join('\n\n');
 
     let tex = `\\documentclass[11pt,a4paper]{letter}
 \\usepackage[utf8]{inputenc}
@@ -582,7 +592,7 @@ export function generateCoverLetterTemplate(letterData, candidateName, jobTitle,
         tex += `\\textbf{Objet :} ${escapeLatex(subject)}\n\n`;
     }
     
-    tex += `\\opening{Madame, Monsieur,}
+    tex += `\\opening{${escapeLatex(greeting)}}
 
 ${escapeLatex(letterContent).replace(/\\n/g, '\n\n')}
 

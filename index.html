@@ -148,13 +148,6 @@
                   <label for="companyName">Entreprise <small>optionnel</small><input id="companyName" type="text" placeholder="Ex. Acme" /></label>
                 </div>
 
-                <div id="profilePhotoSection" class="photo-option">
-                  <input type="file" id="profilePhotoInput" accept="image/*" hidden />
-                  <div id="profilePhotoPreview"><span class="material-symbols-rounded">add_a_photo</span></div>
-                  <div><strong>Photo de profil</strong><span>Optionnelle</span></div>
-                  <button id="removeProfilePhoto" class="subtle-button hidden" type="button">Retirer</button>
-                </div>
-
                 <div class="template-section">
                   <span class="field-label">Style du CV</span>
                   <div id="cvTemplateGrid" class="choice-grid">
@@ -168,6 +161,13 @@
                 <div id="letterTemplateGrid" class="visually-hidden"><button class="template-card selected" data-template="formal" type="button">Formelle</button></div>
               </div>
             </details>
+
+            <div id="profilePhotoSection" class="photo-option photo-before-generate">
+              <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp" hidden />
+              <div id="profilePhotoPreview"><span class="material-symbols-rounded">add_a_photo</span></div>
+              <div><strong>Ajouter une photo au CV</strong><span>Optionnel · JPG, PNG ou WebP</span></div>
+              <button id="removeProfilePhoto" class="subtle-button hidden" type="button">Retirer</button>
+            </div>
 
             <button id="generateBtn" class="primary-button generate-button" type="button" disabled>
               <span class="material-symbols-rounded">auto_awesome</span>

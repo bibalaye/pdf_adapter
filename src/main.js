@@ -32,6 +32,7 @@ const state = {
   adaptedCV: null,
   coverLetter: null,
   profilePhotoDataURL: null,
+  profilePhotoLatex: '',
   cvTemplate: 'classic',
   letterTemplate: 'formal',
 };
@@ -503,18 +504,26 @@ function handleProfilePhotoUpload(file) {
   }
 
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     state.profilePhotoDataURL = e.target.result;
     profilePhotoPreview.innerHTML = `<img src="${e.target.result}" alt="Photo de profil" />`;
     profilePhotoPreview.classList.add('has-photo');
     removeProfilePhotoBtn.classList.remove('hidden');
-    showToast('Photo ajoutée ! Elle sera intégrée au CV.', 'success');
+    try {
+      state.profilePhotoLatex = await createInlinePhotoLatex(e.target.result);
+      showToast('Photo ajoutée au CV.', 'success');
+    } catch (error) {
+      console.error('Photo conversion error:', error);
+      removeProfilePhoto(false);
+      showToast('Cette image ne peut pas être utilisée.', 'error');
+    }
   };
   reader.readAsDataURL(file);
 }
 
-function removeProfilePhoto() {
+function removeProfilePhoto(showNotification = true) {
   state.profilePhotoDataURL = null;
+  state.profilePhotoLatex = '';
   profilePhotoPreview.innerHTML = '';
   profilePhotoPreview.classList.remove('has-photo');
   removeProfilePhotoBtn.classList.add('hidden');
@@ -522,10 +531,54 @@ function removeProfilePhoto() {
 
   // Re-inject Material Symbols icon
   const icon = document.createElement('span');
-  icon.className = 'material-symbols-outlined text-3xl';
-  icon.textContent = 'person_add';
+  icon.className = 'material-symbols-rounded';
+  icon.textContent = 'add_a_photo';
   profilePhotoPreview.appendChild(icon);
-  showToast('Photo supprimée.', 'info');
+  if (showNotification) showToast('Photo supprimée.', 'info');
+}
+
+function createInlinePhotoLatex(dataURL) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const size = 32;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      const crop = Math.min(image.naturalWidth, image.naturalHeight);
+      const sourceX = (image.naturalWidth - crop) / 2;
+      const sourceY = (image.naturalHeight - crop) / 2;
+      context.drawImage(image, sourceX, sourceY, crop, crop, 0, 0, size, size);
+      const pixels = context.getImageData(0, 0, size, size).data;
+      const lines = ['\\begin{tikzpicture}[x=0.0625cm,y=0.0625cm]', '\\clip (16,16) circle (16);'];
+
+      for (let y = 0; y < size; y++) {
+        let runStart = 0;
+        let previous = '';
+        for (let x = 0; x <= size; x++) {
+          let color = '';
+          if (x < size) {
+            const index = (y * size + x) * 4;
+            const quantize = (value) => Math.min(255, Math.round(value / 24) * 24);
+            color = `${quantize(pixels[index])},${quantize(pixels[index + 1])},${quantize(pixels[index + 2])}`;
+          }
+          if (x > 0 && color !== previous) {
+            const [red, green, blue] = previous.split(',');
+            const latexY = size - y - 1;
+            lines.push(`\\fill[fill={rgb,255:red,${red};green,${green};blue,${blue}},draw=none] (${runStart},${latexY}) rectangle (${x},${latexY + 1});`);
+            runStart = x;
+          }
+          previous = color;
+        }
+      }
+
+      lines.push('\\end{tikzpicture}');
+      resolve(lines.join('\n'));
+    };
+    image.onerror = reject;
+    image.src = dataURL;
+  });
 }
 
 // ============================================================
@@ -862,6 +915,7 @@ function renderResults() {
     if (cv.personalInfo) {
       const pi = cv.personalInfo;
       html += `<div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-light);">`;
+      if (state.profilePhotoDataURL) html += `<img src="${state.profilePhotoDataURL}" alt="" style="width:50px;height:50px;object-fit:cover;border-radius:50%;float:right;margin-left:12px;">`;
       if (pi.fullName) html += `<div style="font-size:1.15em;font-weight:700;color:var(--text-primary);margin-bottom:4px;">${esc(pi.fullName)}</div>`;
       if (pi.title) html += `<div style="font-size:0.88em;color:var(--accent-primary);margin-bottom:6px;">${esc(pi.title)}</div>`;
       const cp = [pi.email, pi.phone, pi.location].filter(Boolean);
@@ -933,10 +987,18 @@ function renderResults() {
       letterHtml += `<div style="font-weight:700;color:var(--text-primary);margin-bottom:12px;font-size:0.92em;">Objet : ${esc(letter.subject)}</div>`;
     }
 
-    const fullText = letter.fullText ||
-      [letter.greeting, '', letter.opening, '', letter.body, '', letter.closing, '', letter.signature]
-        .filter(part => part !== undefined)
-        .join('\n');
+    const cleanLetterPart = (value) => String(value || '')
+      .replace(/^\s*(?:(?:bonjour\s+)?madame\s*[,/&-]?\s*monsieur|(?:bonjour\s+)?monsieur\s*[,/&-]?\s*madame|madame|monsieur)[\s,:-]*/i, '')
+      .replace(/\s*(?:bien\s+)?cordialement[,.]?\s*(?:\n\s*[^\n]{2,80})?\s*$/i, '')
+      .trim();
+    const rawGreeting = String(letter.greeting || '').trim();
+    const greeting = /(?:madame|monsieur).*(?:madame|monsieur)/i.test(rawGreeting)
+      ? 'Madame, Monsieur,'
+      : rawGreeting.split('\n')[0] || 'Madame, Monsieur,';
+    const candidateName = letter.candidateName || state.adaptedCV?.personalInfo?.fullName || '';
+    const fullText = [greeting, '', cleanLetterPart(letter.opening), '', cleanLetterPart(letter.body), '', cleanLetterPart(letter.closing), '', 'Cordialement,', candidateName]
+      .filter(part => part !== undefined && part !== '')
+      .join('\n');
 
     letterHtml += `<div style="white-space:pre-wrap;line-height:1.8;font-size:0.88em;color:var(--text-secondary);">${esc(fullText)}</div>`;
     coverLetterPreview.innerHTML = letterHtml;
@@ -950,7 +1012,7 @@ function handleDownloadCV() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
-    const doc = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
+    const doc = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoLatex, state.cvTemplate);
     const jobTitle = jobTitleInput.value.trim() || 'poste';
     const safe = jobTitle.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿçæœ\s-]/g, '').replace(/\s+/g, '_').substring(0, 30);
     downloadPDF(doc, `CV_Adapte_${safe}.pdf`);
@@ -981,7 +1043,7 @@ async function handlePreviewCVCode() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
-    const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
+    const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoLatex, state.cvTemplate);
 
     // Set engine
     const engineInput = latexForm.querySelector('input[name="engine"]');

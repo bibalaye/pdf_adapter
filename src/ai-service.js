@@ -58,36 +58,52 @@ export function getProviderDisplayName() {
  */
 function buildAdaptCVPrompt(language) {
     const lang = language === 'fr' ? 'français' : 'English';
-    return `Tu es un expert senior en recrutement, rédaction de CV professionnels et optimisation ATS (Applicant Tracking System) avec 15+ ans d'expérience.
+    return `Tu es un rédacteur de CV rigoureux spécialisé dans l'adaptation ATS. Tu travailles uniquement à partir du CV et de l'offre fournis. Réponds en ${lang}.
 
-Ton rôle est d'adapter le contenu d'un CV existant pour qu'il corresponde au mieux à une offre d'emploi spécifique. Tu dois produire un CV COMPLET, DÉTAILLÉ et PROFESSIONNEL qui impressionne les recruteurs.
+PRINCIPE ABSOLU : ADAPTER LA PRÉSENTATION, JAMAIS LES FAITS.
 
-RÈGLES IMPÉRATIVES :
-1. Tu DOIS CONSERVER et RECOPIER EXACTEMENT toutes les informations personnelles du candidat : nom complet, prénom, email, téléphone, adresse, LinkedIn, site web, GitHub, portfolio, etc.
-2. Tu DOIS CONSERVER toutes les expériences professionnelles RÉELLES du candidat avec les dates, entreprises et postes EXACTS. NE CHANGE PAS les noms d'entreprises, les dates, ou les titres de poste originaux.
-3. Tu DOIS CONSERVER toutes les formations du candidat avec les dates, écoles et diplômes EXACTS.
-4. Tu ne dois PAS INVENTER de compétences, expériences ou formations que le candidat n'a pas.
-5. Tu peux REFORMULER les descriptions de missions et réalisations pour mieux correspondre à l'offre (utiliser les mots-clés de l'offre).
-6. Tu peux RÉORGANISER l'ordre des compétences pour mettre en avant celles pertinentes pour l'offre.
-7. Tu peux AJOUTER des mots-clés ATS pertinents issus de l'offre, UNIQUEMENT s'ils correspondent à des compétences réelles du candidat.
-8. Tu dois garder un ton professionnel et factuel.
-9. Réponds en ${lang}.
+DONNÉES IMMUABLES À RECOPIER SANS LES ALTÉRER :
+1. Identité et coordonnées : nom, email, téléphone, adresse et liens.
+2. Expériences : nombre d'expériences, employeurs, intitulés occupés, lieux, dates et ordre chronologique.
+3. Formations : diplômes, établissements, spécialités, dates, mentions et projets indiqués.
+4. Certifications : nom, organisme, date, identifiant et niveau.
+5. Langues, projets, outils, compétences et réalisations factuelles.
 
-RÈGLES DE CONTENU DÉTAILLÉ — TRÈS IMPORTANT :
-10. Le "summary" (résumé professionnel) doit faire 4 à 6 phrases complètes. Il doit être percutant, mentionner les années d'expérience, les domaines d'expertise principaux, les technologies clés, et montrer la valeur ajoutée du candidat par rapport à l'offre.
-11. Chaque expérience professionnelle doit avoir entre 4 et 6 "bullets" (réalisations). Chaque bullet doit être détaillé (1-2 phrases), utiliser des verbes d'action forts et inclure des métriques/chiffres quand possible (ex: "Augmenté les performances de 40%", "Géré une équipe de 5 développeurs", "Déployé en production pour 10 000+ utilisateurs").
-12. Chaque formation doit inclure un champ "description" avec les mentions, spécialisations, projets notables ou mémoire si pertinent.
-13. Les "keySkills" doivent comprendre entre 8 et 15 compétences, organisées par pertinence pour l'offre.
-14. Si le candidat a des projets personnels/open source pertinents, les inclure dans "projects".
-15. Inclure les "interests" (centres d'intérêt) si le candidat en mentionne.
-16. Les "certifications" doivent inclure l'organisme certificateur si disponible.
+INTERDICTIONS STRICTES :
+- N'invente, ne complète et ne déduis aucun fait absent du CV.
+- N'invente jamais de métrique, pourcentage, volume, budget, taille d'équipe, responsabilité, technologie, résultat, client ou mission.
+- N'ajoute aucune compétence uniquement parce qu'elle figure dans l'offre.
+- Ne transforme pas une exposition ou une notion en maîtrise ou expertise.
+- Ne calcule et ne mentionne jamais un nombre total d'années d'expérience, sauf si ce nombre est écrit explicitement dans le CV source.
+- N'ajoute jamais senior, expert, lead, manager ou spécialiste si ce niveau n'est pas explicitement justifié dans le CV.
+- Ne comble pas les champs manquants : utilise une chaîne vide ou un tableau vide.
+- En cas de doute, conserve le texte source plutôt que de supposer.
+
+ADAPTATIONS AUTORISÉES :
+- Réordonner les compétences déjà présentes selon leur pertinence pour l'offre.
+- Reformuler et raccourcir une mission sans changer son sens, le niveau de responsabilité ni les résultats.
+- Réutiliser un mot-clé de l'offre seulement si la même compétence ou notion est attestée dans le CV.
+- Mettre d'abord les éléments les plus pertinents, sans supprimer une expérience, une formation ou une certification.
+
+TITRE DU CV :
+- Crée un titre professionnel de 3 à 6 mots appartenant à la même famille de métier que le poste visé.
+- Ne recopie pas mot pour mot l'intitulé de l'offre.
+- Le titre doit rester cohérent avec le niveau et les compétences réellement visibles dans le CV.
+- N'ajoute aucune séniorité absente du CV.
+
+RÉSUMÉ ET CONTENU :
+- Rédige un résumé sobre de 2 à 4 phrases fondé uniquement sur le profil réel.
+- Ne fais aucune affirmation générale non démontrée.
+- Pour chaque expérience, conserve seulement les missions et résultats attestés. Reformule au maximum 2 à 5 points existants, sans en créer pour atteindre un quota.
+- Reproduis les descriptions de formation et certification uniquement si elles existent.
+- Le score de correspondance évalue seulement l'adéquation réelle et ne doit pas être artificiellement élevé.
 
 FORMAT DE RÉPONSE :
 Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec la structure suivante :
 {
   "personalInfo": {
     "fullName": "Prénom NOM du candidat (COPIÉ DU CV)",
-    "title": "Titre professionnel adapté à l'offre",
+    "title": "Titre de la famille du poste, non identique à l'offre et sans séniorité inventée",
     "email": "email du candidat (COPIÉ DU CV)",
     "phone": "téléphone du candidat (COPIÉ DU CV)",
     "location": "ville/adresse du candidat (COPIÉ DU CV)",
@@ -95,19 +111,16 @@ Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans back
     "website": "site web ou portfolio si présent",
     "github": "GitHub si présent"
   },
-  "summary": "Résumé professionnel DÉTAILLÉ adapté à l'offre (4-6 phrases percutantes mentionnant années d'expérience, domaines d'expertise, technologies maîtrisées et valeur ajoutée pour le poste visé)",
-  "keySkills": ["compétence 1", "compétence 2", "...", "8 à 15 compétences organisées par pertinence"],
+  "summary": "Résumé factuel de 2 à 4 phrases, sans nombre d'années déduit",
+  "keySkills": ["uniquement des compétences présentes dans le CV, réordonnées par pertinence"],
   "experience": [
     {
       "title": "Titre du poste EXACT",
       "company": "Nom de l'entreprise EXACT",
       "period": "Dates EXACTES",
-      "description": "Brève description du rôle et du contexte (équipe, environnement technique, enjeux)",
+      "description": "Reformulation fidèle d'un contexte explicitement présent, sinon chaîne vide",
       "bullets": [
-        "Réalisation 1 détaillée avec verbe d'action et métriques (obligatoire: 4-6 bullets par expérience)",
-        "Réalisation 2 reformulée avec mots-clés de l'offre et impact mesurable",
-        "Réalisation 3 mettant en avant les compétences techniques utilisées",
-        "Réalisation 4 démontrant les résultats concrets et la valeur apportée"
+        "Missions ou résultats réellement présents dans le CV, reformulés sans ajout"
       ]
     }
   ],
@@ -116,7 +129,7 @@ Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans back
       "degree": "Diplôme EXACT",
       "school": "École/Université EXACTE",
       "period": "Dates EXACTES",
-      "description": "Mention, spécialisation, matières pertinentes ou projet de fin d'études si applicable"
+      "description": "Description présente dans le CV, sinon chaîne vide"
     }
   ],
   "projects": [
@@ -127,18 +140,14 @@ Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans back
     }
   ],
   "languages": ["Langue 1 - Niveau (ex: Natif, Courant, Intermédiaire)", "Langue 2 - Niveau"],
-  "certifications": ["Certification 1 — Organisme (Année si connue)", "Certification 2"],
+  "certifications": ["Certifications recopiées sans modification ni ajout"],
   "interests": ["Centre d'intérêt 1", "Centre d'intérêt 2"],
   "matchScore": 85,
   "improvements": ["conseil 1 pour améliorer le CV", "conseil 2"],
-  "addedKeywords": ["mot-clé ATS 1 ajouté", "mot-clé ATS 2"]
+  "addedKeywords": ["mots-clés ATS déjà présents dans le CV et pertinents pour l'offre"]
 }
 
-IMPORTANT : 
-- Tous les champs de personalInfo, experience et education doivent contenir les données RÉELLES du CV du candidat. Ne remplace JAMAIS un nom, une date, un diplôme ou une entreprise par un placeholder.
-- Le CV généré doit être EXHAUSTIF et COMPLET. Ne raccourcis PAS le contenu. Un bon CV professionnel fait 1 à 2 pages.
-- Chaque bullet point doit être une phrase complète avec un verbe d'action au début.
-- Si des informations sont manquantes dans le CV source (pas de projets, pas de centres d'intérêt), laisse le tableau vide [].`;
+CONTRÔLE FINAL : compare chaque information au CV source. Si une donnée ne peut pas être reliée directement au CV, supprime-la. Ne remplace jamais une donnée par un placeholder. Réponds uniquement avec le JSON.`;
 }
 
 /**
@@ -146,37 +155,38 @@ IMPORTANT :
  */
 function buildCoverLetterPrompt(language) {
     const lang = language === 'fr' ? 'français' : 'English';
-    return `Tu es un expert senior en recrutement et en rédaction de lettres de motivation percutantes pour des postes de haut niveau.
+    return `Tu rédiges une lettre de motivation courte, précise et crédible en ${lang}, uniquement à partir du CV et de l'offre fournis.
 
-Ton rôle est de rédiger une lettre de motivation personnalisée, professionnelle et extrêmement convaincante en utilisant la structure "Moi, Vous, Nous".
+RÈGLES FACTUELLES :
+1. N'invente aucune expérience, compétence, réalisation, métrique, ancienneté, connaissance de l'entreprise ou motivation personnelle.
+2. Ne mentionne un nombre d'années d'expérience que s'il est écrit explicitement dans le CV.
+3. Ne prétends pas connaître l'actualité, la culture, les produits ou les projets de l'entreprise sauf s'ils figurent dans l'offre.
+4. Choisis un ou deux éléments réels du profil qui répondent directement aux priorités explicites de l'offre.
+5. Si le profil ne couvre pas un critère, ne prétends pas le contraire.
 
-RÈGLES DE RÉDACTION :
-1. TON : Professionnel, enthousiaste, et confiant sans être arrogant. Évite les clichés et les phrases toutes faites.
-2. STRUCTURE "MOI, VOUS, NOUS" :
-   - ACCROCHE (Vous) : Montre que tu connais l'entreprise, ses enjeux récents ou sa réputation. Explique pourquoi tu postules chez EUX spécifiquement.
-   - EXPÉRIENCE (Moi) : Mets en avant 2-3 réalisations concrètes de ton CV qui répondent DIRECTEMENT aux besoins de l'offre. Utilise des chiffres et des résultats.
-   - COLLABORATION (Nous) : Explique ce que vous allez accomplir ensemble. Comment tes compétences vont résoudre leurs problèmes actuels ?
-3. DÉTAILS : La lettre doit être riche et détaillée (400-500 mots). Elle ne doit pas être un simple résumé du CV.
-4. PERSONNALISATION : Utilise le nom complet du candidat et les informations de l'entreprise fournies.
-5. Réponds en ${lang}.
+STYLE ET LONGUEUR :
+- 180 à 250 mots maximum, hors objet, salutation et signature.
+- Trois paragraphes courts : motivation liée à l'offre, adéquation factuelle du profil, projection concrète dans le poste.
+- Ton direct, naturel et professionnel. Pas de flatterie générique, superlatif, cliché ou répétition du CV.
+- Une seule salutation dans le champ "greeting". N'écris aucune salutation dans opening, body ou closing.
+- Le champ "closing" contient seulement la dernière phrase proposant un échange. Il ne contient ni "Cordialement", ni signature.
+- N'ajoute pas de champ fullText et ne répète jamais le nom du candidat dans le corps.
 
 FORMAT DE RÉPONSE :
 Tu DOIS répondre UNIQUEMENT avec un objet JSON valide (sans markdown, sans backticks) avec la structure suivante :
 {
   "candidateName": "Prénom NOM du candidat",
   "subject": "Candidature au poste de [titre exact du poste visé]",
-  "greeting": "Madame, Monsieur, (ou nom du recruteur si disponible)",
-  "opening": "Paragraphe d'accroche percutant sur l'entreprise et la motivation pour le poste (environ 60-80 mots)",
-  "body": "Corps de la lettre détaillé. Divise ton argumentation en 2 ou 3 paragraphes distincts (Moi, Vous, Nous). Chaque paragraphe doit être dense et argumenté. Utilise \\n\\n pour séparer les paragraphes.",
-  "closing": "Conclusion élégante, appel à l'action pour un entretien et formule de politesse standard.",
-  "signature": "Cordialement,\\n[NOM COMPLET]",
-  "fullText": "La lettre complète et parfaitement formatée."
+  "greeting": "Madame, Monsieur, ou nom du recruteur seulement s'il figure dans l'offre",
+  "opening": "Motivation spécifique fondée sur les missions de l'offre",
+  "body": "Adéquation entre un ou deux éléments réels du CV et les besoins de l'offre",
+  "closing": "Contribution envisagée et proposition d'échange, sans formule de politesse ni signature"
 }
 
-IMPORTANT : Ne génère pas de placeholders comme [NOM]. Utilise les vraies données.`;
+IMPORTANT : Ne génère aucun placeholder. Vérifie que chaque affirmation sur le candidat existe dans le CV et que chaque affirmation sur l'entreprise existe dans l'offre. Réponds uniquement avec le JSON.`;
 }
 
-const CACHE_PREFIX = 'adaptacv_cache_';
+const CACHE_PREFIX = 'adaptacv_cache_v2_';
 
 function hashCode(str) {
     let hash = 0;
@@ -234,17 +244,12 @@ ${jobDescription}
 
 INSTRUCTIONS DÉTAILLÉES :
 1. Commence par extraire TOUTES les informations personnelles du candidat (nom, prénom, email, téléphone, adresse, LinkedIn, GitHub, site web, etc.)
-2. Conserve TOUTES les expériences professionnelles avec les dates et entreprises EXACTES
-3. Pour CHAQUE expérience, génère entre 4 et 6 bullet points DÉTAILLÉS avec des verbes d'action et des métriques/chiffres quand possible
-4. Ajoute une "description" de contexte pour chaque expérience (taille d'équipe, stack technique, enjeux)
-5. Conserve TOUTES les formations avec dates et écoles EXACTES, et ajoute une description (mention, spécialisation)
-6. Crée un résumé professionnel LONG et PERCUTANT (4-6 phrases) qui met en avant les points forts du candidat par rapport à l'offre
-7. Liste 8 à 15 compétences clés organisées par pertinence
-8. Inclus les projets personnels/professionnels notables si mentionnés
-9. Inclus les centres d'intérêt si mentionnés
-10. Reformule les descriptions pour correspondre aux mots-clés de l'offre
-
-RAPPEL : Le CV doit être COMPLET et DÉTAILLÉ, pas un résumé minimaliste. Chaque section doit être riche en contenu.
+2. Recopie sans modification les employeurs, postes occupés, dates, formations, diplômes et certifications.
+3. Conserve uniquement les missions, compétences, métriques et résultats présents dans le CV. N'en crée aucun.
+4. Réordonne et reformule sobrement les éléments réels les plus pertinents pour l'offre.
+5. Crée un titre de la même famille professionnelle que le poste ciblé, mais différent de son intitulé exact et conforme au niveau réel du candidat.
+6. Ne mentionne pas de nombre total d'années d'expérience sauf s'il est explicitement écrit dans le CV.
+7. Avant de répondre, supprime toute affirmation qui ne peut pas être prouvée par le CV source.
 
 Réponds UNIQUEMENT en JSON valide.`;
 
@@ -282,7 +287,7 @@ export async function generateCoverLetter(cvText, jobDescription, jobTitle, comp
                 onProgress('letter-start');
                 setTimeout(() => onProgress('letter-done'), 500);
             }
-            return JSON.parse(cached);
+            return normalizeCoverLetter(JSON.parse(cached));
         }
     } catch(e) { console.warn('Cache read error', e); }
 
@@ -299,11 +304,11 @@ ${jobDescription}
 ---
 
 INSTRUCTIONS DÉTAILLÉES :
-1. Analyse les besoins critiques de l'entreprise dans l'offre.
-2. Sélectionne les 3 réalisations les plus impressionnantes du CV qui répondent à ces besoins.
-3. Rédige une lettre "Moi - Vous - Nous" de 400 à 500 mots.
-4. Le paragraphe "Vraie Valeur" (Nous) doit expliquer concrètement comment le candidat va aider l'entreprise à atteindre ses objectifs.
-5. Assure-toi que le ton est captivant et donne envie au recruteur de rencontrer le candidat.
+1. Analyse uniquement les besoins explicitement présents dans l'offre.
+2. Sélectionne un ou deux éléments vérifiables du CV qui y répondent réellement.
+3. Rédige 180 à 250 mots en trois paragraphes courts et complémentaires.
+4. Formule une motivation cohérente à partir des missions proposées et du parcours réel, sans inventer d'intérêt personnel.
+5. Place la salutation uniquement dans "greeting" et aucune formule de politesse dans "closing".
 
 Réponds UNIQUEMENT en JSON valide.`;
 
@@ -316,13 +321,36 @@ Réponds UNIQUEMENT en JSON valide.`;
         userMessage
     );
 
-    const parsedResult = parseJSONResponse(result);
+    const parsedResult = normalizeCoverLetter(parseJSONResponse(result));
     try {
         sessionStorage.setItem(cacheKey, JSON.stringify(parsedResult));
     } catch(e) { console.warn('Cache write error', e); }
 
     if (onProgress) onProgress('letter-done');
     return parsedResult;
+}
+
+function normalizeCoverLetter(letter) {
+    const greetingPattern = /^\s*(?:(?:bonjour\s+)?madame\s*[,/&-]?\s*monsieur|(?:bonjour\s+)?monsieur\s*[,/&-]?\s*madame|madame|monsieur|dear\s+(?:sir(?:\s+or\s+madam)?|madam))[\s,:-]*/i;
+    const signoffPattern = /\s*(?:bien\s+)?cordialement[,.]?\s*(?:\n\s*[^\n]{2,80})?\s*$/i;
+    const cleanPart = (value) => String(value || '')
+        .replace(greetingPattern, '')
+        .replace(signoffPattern, '')
+        .trim();
+
+    const rawGreeting = String(letter.greeting || '').trim();
+    const greeting = /(?:madame|monsieur).*(?:madame|monsieur)/i.test(rawGreeting)
+        ? 'Madame, Monsieur,'
+        : rawGreeting.split('\n')[0] || 'Madame, Monsieur,';
+
+    return {
+        candidateName: String(letter.candidateName || '').trim(),
+        subject: String(letter.subject || '').trim(),
+        greeting,
+        opening: cleanPart(letter.opening),
+        body: cleanPart(letter.body),
+        closing: cleanPart(letter.closing),
+    };
 }
 
 /**
