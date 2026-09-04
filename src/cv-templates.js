@@ -47,6 +47,7 @@ function renderDatedEntry(title, period, subtitle, description = '', bullets = [
 export function generateStandardTemplate(cvData, candidateName, template = 'classic', profilePhotoDataURL = '') {
     const pi = cvData.personalInfo || {};
     const name = pi.fullName || candidateName || 'Candidat';
+    const photoData = typeof profilePhotoDataURL === 'string' ? profilePhotoDataURL : '';
 
     let primaryColor = '46, 107, 79';
     if (template === 'modern') {
@@ -57,8 +58,8 @@ export function generateStandardTemplate(cvData, candidateName, template = 'clas
         primaryColor = '225, 112, 85';
     }
 
-    const photoExtension = profilePhotoDataURL.startsWith('data:image/png') ? 'png' : 'jpg';
-    const photoBase64 = profilePhotoDataURL.includes(',') ? profilePhotoDataURL.split(',')[1] : '';
+    const photoExtension = photoData.startsWith('data:image/png') ? 'png' : 'jpg';
+    const photoBase64 = photoData.includes(',') ? photoData.split(',')[1] : '';
     const photoSetup = photoBase64 ? `\\usepackage{graphicx}
 \\directlua{
 local data = [[${photoBase64}]]

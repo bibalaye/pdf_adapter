@@ -21,6 +21,7 @@ export { escapeLatex };
  * Orchestrates calls to specific template functions
  */
 export function generateAdaptedCVPDF(cvData, candidateName = '', profilePhotoDataURL = '', template = 'classic') {
+    const photoData = typeof profilePhotoDataURL === 'string' ? profilePhotoDataURL : '';
     if (template === 'twentysecond') {
         return generateTwentySecondTemplate(cvData, candidateName);
     }
@@ -35,7 +36,7 @@ export function generateAdaptedCVPDF(cvData, candidateName = '', profilePhotoDat
     }
     
     // Returns Classic, Modern, Executive, or Bold
-    return generateStandardTemplate(cvData, candidateName, template, profilePhotoDataURL);
+    return generateStandardTemplate(cvData, candidateName, template, photoData);
 }
 
 /**
