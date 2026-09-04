@@ -24,6 +24,23 @@ function escapeLatexArray(arr) {
     return arr.map(escapeLatex);
 }
 
+function renderDatedEntry(title, period, subtitle, description = '', bullets = []) {
+    let block = `\\noindent\\begin{minipage}[t]{0.68\\linewidth}
+\\raggedright\\textbf{${escapeLatex(title || '')}}\\par
+{\\color{primary}\\textbf{${escapeLatex(subtitle || '')}}}
+\\end{minipage}\\hfill
+\\begin{minipage}[t]{0.27\\linewidth}
+\\raggedleft{\\small\\textit{${escapeLatex(period || '')}}}
+\\end{minipage}`;
+    if (description) block += `\n\\smallskip\n${escapeLatex(description)}`;
+    if (bullets?.length) {
+        block += `\n\\begin{itemize}[leftmargin=1.15em,nosep,topsep=3pt]`;
+        bullets.forEach(item => { block += `\n  \\item ${escapeLatex(item)}`; });
+        block += '\n\\end{itemize}';
+    }
+    return block;
+}
+
 /**
  * Standard templates (Classic, Modern, Executive, Bold)
  */
@@ -31,7 +48,7 @@ export function generateStandardTemplate(cvData, candidateName, template = 'clas
     const pi = cvData.personalInfo || {};
     const name = pi.fullName || candidateName || 'Candidat';
 
-    let primaryColor = '40, 50, 110';
+    let primaryColor = '46, 107, 79';
     if (template === 'modern') {
         primaryColor = '108, 92, 231';
     } else if (template === 'executive') {
@@ -63,6 +80,10 @@ file:write(table.concat(output))
 file:close()
 }` : '';
 
+    if (template !== 'classic') {
+        return generateDistinctStandardTemplate(cvData, name, template, photoSetup, photoExtension, Boolean(photoBase64));
+    }
+
     let tex = `\\documentclass[11pt,a4paper,sans]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -72,6 +93,8 @@ file:close()
 \\usepackage{xcolor}
 \\usepackage{titlesec}
 \\usepackage{enumitem}
+\\usepackage{array}
+\\usepackage{tabularx}
 \\usepackage{hyperref}
 \\usepackage{parskip}
 ${photoSetup}
@@ -130,30 +153,14 @@ ${photoBase64 ? `\\includegraphics[width=2.8cm,height=3.4cm,keepaspectratio]{pro
     if (cvData.experience && cvData.experience.length > 0) {
         tex += `\\section*{Expérience Professionnelle}\n`;
         cvData.experience.forEach(exp => {
-            tex += `\\noindent\\textbf{${escapeLatex(exp.title || '')}} \\hfill \\textit{${escapeLatex(exp.period || '')}} \\\\\n`;
-            tex += `\\noindent\\textbf{\\color{primary}${escapeLatex(exp.company || '')}} \\\\\n`;
-            if (exp.description) {
-                tex += `\\vspace{-0.2cm}\n\n\\textit{${escapeLatex(exp.description)}}\n\n`;
-            }
-            if (exp.bullets && exp.bullets.length > 0) {
-                tex += `\\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]\n`;
-                exp.bullets.forEach(bullet => {
-                    tex += `  \\item ${escapeLatex(bullet)}\n`;
-                });
-                tex += `\\end{itemize}\n\\vspace{0.2cm}\n`;
-            } else {
-                tex += `\\vspace{0.2cm}\n`;
-            }
+            tex += `${renderDatedEntry(exp.title, exp.period, exp.company, exp.description, exp.bullets)}\n\\medskip\n`;
         });
     }
 
     if (cvData.education && cvData.education.length > 0) {
         tex += `\\section*{Formation}\n`;
         cvData.education.forEach(edu => {
-            tex += `\\noindent\\textbf{${escapeLatex(edu.degree || '')}} \\hfill \\textit{${escapeLatex(edu.period || '')}} \\\\\n`;
-            tex += `\\noindent\\textbf{\\color{primary}${escapeLatex(edu.school || '')}} \\\\\n`;
-            if (edu.description) tex += `${escapeLatex(edu.description)}\n`;
-             tex += `\\vspace{0.2cm}\n\n`;
+            tex += `${renderDatedEntry(edu.degree, edu.period, edu.school, edu.description)}\n\\medskip\n`;
         });
     }
 
@@ -187,6 +194,55 @@ ${photoBase64 ? `\\includegraphics[width=2.8cm,height=3.4cm,keepaspectratio]{pro
 
     tex += `\\end{document}\n`;
     return tex;
+}
+
+function generateDistinctStandardTemplate(cvData, name, template, photoSetup, photoExtension, hasPhoto) {
+    const bs = '\\';
+    const pi = cvData.personalInfo || {};
+    const palettes = {
+        modern: ['35,75,57', '29,48,38', '232,241,234'],
+        minimal: ['57,64,59', '32,37,34', '244,245,243'],
+        executive: ['44,83,63', '24,34,28', '231,238,233'],
+        bold: ['178,83,61', '75,45,37', '247,233,227'],
+    };
+    const palette = palettes[template];
+    const photo = hasPhoto ? `${bs}includegraphics[width=2.6cm,height=3.1cm,keepaspectratio]{profile-photo.${photoExtension}}` : '';
+    const contacts = [pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website]
+        .filter(Boolean).map(escapeLatex).join(` ${bs}enspace | ${bs}enspace `);
+    const skills = escapeLatexArray(cvData.keySkills || []).join(` ${bs}enspace ${bs}textbullet ${bs}enspace `);
+    const languages = escapeLatexArray(cvData.languages || []).join(', ');
+    const certifications = escapeLatexArray(cvData.certifications || []);
+    const experience = (cvData.experience || []).map(exp =>
+        renderDatedEntry(exp.title, exp.period, exp.company, exp.description, exp.bullets)
+    ).join(`\n${bs}medskip\n`);
+    const education = (cvData.education || []).map(edu =>
+        renderDatedEntry(edu.degree, edu.period, edu.school, edu.description)
+    ).join(`\n${bs}medskip\n`);
+    const projects = (cvData.projects || []).map(project =>
+        `${bs}textbf{${escapeLatex(project.name || '')}}${project.description ? ` ${bs}${bs}\n${escapeLatex(project.description)}` : ''}`
+    ).join(`\n${bs}medskip\n`);
+    const section = (title, content) => content ? `${bs}section*{${title}}\n${content}\n` : '';
+    let body;
+
+    if (template === 'modern') {
+        const sidebar = [
+            photo ? `${bs}begin{center}${photo}${bs}end{center}${bs}medskip` : '',
+            `{${bs}Large${bs}bfseries Contact}${bs}par${bs}smallskip`,
+            `{${bs}small ${contacts || 'Coordonnées disponibles'}}`,
+            skills ? `${bs}medskip{${bs}large${bs}bfseries Compétences}${bs}par${bs}smallskip{${bs}small ${skills}}` : '',
+            languages ? `${bs}medskip{${bs}large${bs}bfseries Langues}${bs}par${bs}smallskip{${bs}small ${languages}}` : '',
+            certifications.length ? `${bs}medskip{${bs}large${bs}bfseries Certifications}${bs}par${bs}smallskip{${bs}small ${certifications.join(`${bs}${bs}[3pt]`)}}` : '',
+        ].filter(Boolean).join('\n');
+        body = `${bs}noindent${bs}begin{minipage}[t]{0.31${bs}textwidth}${bs}colorbox{header}{${bs}parbox[t][0.86${bs}textheight][t]{${bs}dimexpr${bs}linewidth-2${bs}fboxsep}{${bs}color{white}${bs}vspace{0.3cm}${sidebar}}}${bs}end{minipage}${bs}hfill${bs}begin{minipage}[t]{0.64${bs}textwidth}\n{${bs}Huge${bs}bfseries ${escapeLatex(name)}}${bs}par\n{${bs}Large${bs}color{primary} ${escapeLatex(pi.title || '')}}${bs}par${bs}vspace{0.3cm}\n${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expérience', experience)}${section('Formation', education)}${section('Projets', projects)}\n${bs}end{minipage}`;
+    } else if (template === 'minimal') {
+        body = `${bs}begin{center}${photo ? `\n${photo}${bs}${bs}[0.25cm]` : ''}\n{${bs}huge${bs}bfseries ${escapeLatex(name)}}${bs}par\n{${bs}large ${escapeLatex(pi.title || '')}}${bs}par${bs}smallskip\n{${bs}small${bs}color{softtext} ${contacts}}${bs}par${bs}end{center}${bs}vspace{0.45cm}\n${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expérience', experience)}${section('Formation', education)}${skills ? section('Compétences', skills) : ''}${certifications.length ? section('Certifications', certifications.join(` ${bs}enspace | ${bs}enspace `)) : ''}`;
+    } else if (template === 'executive') {
+        body = `${bs}noindent${bs}colorbox{header}{${bs}parbox{${bs}dimexpr${bs}textwidth-2${bs}fboxsep}{${bs}color{white}${bs}vspace{0.4cm}${bs}hspace{0.2cm}${bs}begin{minipage}{0.67${bs}textwidth}{${bs}Huge${bs}bfseries ${escapeLatex(name)}}${bs}${bs}[4pt]{${bs}large ${escapeLatex(pi.title || '')}}${bs}end{minipage}${bs}hfill${photo ? `${bs}begin{minipage}{0.21${bs}textwidth}${bs}raggedleft ${photo}${bs}end{minipage}` : ''}${bs}vspace{0.35cm}}}\n${bs}vspace{0.3cm}${bs}begin{center}{${bs}small ${contacts}}${bs}end{center}\n${section('Profil exécutif', escapeLatex(cvData.summary || ''))}${section('Parcours professionnel', experience)}${section('Formation', education)}${skills ? section('Expertises', skills) : ''}${certifications.length ? section('Certifications', certifications.join(` ${bs}enspace | ${bs}enspace `)) : ''}`;
+    } else {
+        body = `${bs}noindent{${bs}color{primary}${bs}rule{${bs}textwidth}{8pt}}${bs}par${bs}vspace{0.35cm}\n${bs}noindent${bs}begin{minipage}[t]{0.72${bs}textwidth}{${bs}fontsize{28pt}{31pt}${bs}selectfont${bs}bfseries ${escapeLatex(name)}}${bs}${bs}[5pt]{${bs}Large${bs}color{primary} ${escapeLatex(pi.title || '')}}${bs}${bs}[8pt]{${bs}small ${contacts}}${bs}end{minipage}${bs}hfill${photo ? `${bs}begin{minipage}[t]{0.22${bs}textwidth}${bs}raggedleft ${photo}${bs}end{minipage}` : ''}${bs}vspace{0.4cm}\n${skills ? `${bs}noindent${bs}colorbox{soft}{${bs}parbox{${bs}dimexpr${bs}textwidth-2${bs}fboxsep}{${bs}textbf{Compétences clés}${bs}quad ${skills}}}${bs}vspace{0.25cm}` : ''}\n${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expériences sélectionnées', experience)}${section('Formation', education)}${section('Projets', projects)}${certifications.length ? section('Certifications', certifications.join(` ${bs}enspace | ${bs}enspace `)) : ''}`;
+    }
+
+    return `${bs}documentclass[10pt,a4paper]{article}\n${bs}usepackage[utf8]{inputenc}\n${bs}usepackage[T1]{fontenc}\n${bs}usepackage{lmodern}\n${bs}usepackage{geometry}\n${bs}geometry{left=1.45cm,right=1.45cm,top=1.45cm,bottom=1.45cm}\n${bs}usepackage{xcolor}\n${bs}usepackage{titlesec}\n${bs}usepackage{enumitem}\n${bs}usepackage{hyperref}\n${bs}usepackage{parskip}\n${photoSetup}\n${bs}definecolor{primary}{RGB}{${palette[0]}}\n${bs}definecolor{textdark}{RGB}{31,39,34}\n${bs}definecolor{softtext}{RGB}{103,113,106}\n${bs}definecolor{header}{RGB}{${palette[1]}}\n${bs}definecolor{soft}{RGB}{${palette[2]}}\n${bs}hypersetup{colorlinks=true,urlcolor=primary,pdftitle={CV - ${escapeLatex(name)}}}\n${bs}titleformat{${bs}section}{${bs}Large${bs}bfseries${bs}color{${template === 'minimal' ? 'textdark' : 'primary'}}}{}{0em}{}${template === 'minimal' ? '' : `[${bs}titlerule]`}\n${bs}titlespacing{${bs}section}{0pt}{11pt}{5pt}\n${bs}renewcommand{${bs}familydefault}{${bs}sfdefault}\n${bs}begin{document}\n${bs}pagestyle{empty}\n${body}\n${bs}end{document}\n`;
 }
 
 /**

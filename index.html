@@ -106,9 +106,9 @@
 
         <div class="offer-layout">
           <div class="offer-editor">
-            <div class="offer-card">
-              <div class="section-label"><span><span class="material-symbols-rounded">work</span> Offre d’emploi</span><small>Collez l’annonce complète</small></div>
-              <textarea id="jobDescription" rows="13" placeholder="Collez l’offre complète ici..."></textarea>
+            <div id="jobOfferCard" class="offer-card">
+              <div class="section-label"><span><span class="material-symbols-rounded">work</span> Offre d’emploi</span><label for="jobFileInput" class="offer-file-button"><span class="material-symbols-rounded">attach_file</span><span id="jobFileLabel">Importer PDF ou image</span></label><input id="jobFileInput" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" hidden /></div>
+              <textarea id="jobDescription" rows="13" placeholder="Collez l’offre complète ici, ou déposez un PDF ou une image..."></textarea>
               <div class="editor-footer"><span id="jobDescCount">0 caractère</span><span><span class="material-symbols-rounded">auto_awesome</span> Analyse automatique</span></div>
             </div>
 
@@ -224,7 +224,7 @@
 
     <div id="historyModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
       <div class="modal-card history-modal">
-        <div class="modal-header"><div><span class="material-symbols-rounded">history</span><h2 id="historyTitle">Historique</h2></div><div><button id="clearHistoryBtn" class="subtle-button danger-text" type="button">Tout effacer</button><button id="closeHistoryBtn" class="icon-button" type="button" aria-label="Fermer"><span class="material-symbols-rounded">close</span></button></div></div>
+        <div class="modal-header history-header"><div><span class="material-symbols-rounded">history</span><span><h2 id="historyTitle">Vos candidatures</h2><small>Retrouvez et ouvrez vos derniers dossiers</small></span></div><div><button id="clearHistoryBtn" class="subtle-button danger-text" type="button">Tout effacer</button><button id="closeHistoryBtn" class="icon-button" type="button" aria-label="Fermer"><span class="material-symbols-rounded">close</span></button></div></div>
         <div id="historyList" class="history-list"><div id="historyEmpty" class="empty-state"><span class="material-symbols-rounded">folder_open</span><strong>Aucune candidature</strong><span>Vos créations apparaîtront ici.</span></div></div>
       </div>
     </div>

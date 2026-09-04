@@ -4,7 +4,7 @@
  * particles, confetti, and micro-animations
  */
 import './style.css';
-import { extractTextFromPDF, renderPDFPagesToImages } from './pdf-parser.js';
+import { extractTextFromPDF, extractTextFromImage, renderPDFPagesToImages } from './pdf-parser.js';
 import {
   getSettings,
   saveSettings,
@@ -75,6 +75,9 @@ const jobTitleInput = $('#jobTitle');
 const companyNameInput = $('#companyName');
 const jobDescriptionInput = $('#jobDescription');
 const jobDescCount = $('#jobDescCount');
+const jobFileInput = $('#jobFileInput');
+const jobFileLabel = $('#jobFileLabel');
+const jobOfferCard = $('#jobOfferCard');
 const prevStep2Btn = $('#prevStep2');
 const generateBtn = $('#generateBtn');
 const changeCVBtn = $('#changeCVBtn');
@@ -366,6 +369,7 @@ function setupEventListeners() {
     companyNameInput.value = '';
     jobDescriptionInput.value = '';
     jobDescCount.textContent = '0 caractère';
+    jobFileLabel.textContent = 'Importer PDF ou image';
     updateGenerateButton();
     goToStep(state.extractedText ? 2 : 1);
   });
@@ -379,6 +383,21 @@ function setupEventListeners() {
 
   jobTitleInput.addEventListener('input', updateGenerateButton);
   includeCoverLetterInput.addEventListener('change', updateGenerationChoice);
+  jobFileInput.addEventListener('change', (event) => {
+    const [file] = event.target.files;
+    if (file) handleJobFile(file);
+  });
+  jobOfferCard.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    jobOfferCard.classList.add('drag-over');
+  });
+  jobOfferCard.addEventListener('dragleave', () => jobOfferCard.classList.remove('drag-over'));
+  jobOfferCard.addEventListener('drop', (event) => {
+    event.preventDefault();
+    jobOfferCard.classList.remove('drag-over');
+    const [file] = event.dataTransfer.files;
+    if (file) handleJobFile(file);
+  });
 
   // --- Template Selection ---
   if (cvTemplateGrid) {
@@ -468,6 +487,7 @@ function setupEventListeners() {
       const tpl = btn.dataset.tpl;
       state.cvTemplate = tpl;
       resultCVTemplateSwitcher.querySelectorAll('.result-tpl-btn').forEach(b => b.classList.toggle('active', b === btn));
+      renderResults();
       showToast(`Modèle « ${TEMPLATE_NAMES[tpl] || tpl} » appliqué`, 'success');
     });
   }
@@ -499,8 +519,8 @@ function setupEventListeners() {
 // Profile Photo
 // ============================================================
 function handleProfilePhotoUpload(file) {
-  if (!file.type.startsWith('image/')) {
-    showToast('Veuillez sélectionner une image.', 'error');
+  if (!['image/jpeg', 'image/png'].includes(file.type)) {
+    showToast('Utilisez une image JPG ou PNG.', 'error');
     return;
   }
   if (file.size > 5 * 1024 * 1024) {
@@ -749,6 +769,45 @@ function updateGenerationChoice() {
   includeCoverLetterInput.closest('.letter-toggle')?.classList.toggle('is-disabled', !withLetter);
 }
 
+async function handleJobFile(file) {
+  const isPDF = file.type === 'application/pdf';
+  const isImage = file.type.startsWith('image/');
+  if (!isPDF && !isImage) {
+    showToast('Utilisez un PDF ou une image.', 'error');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    showToast('Fichier trop volumineux (10 Mo maximum).', 'error');
+    return;
+  }
+
+  jobFileInput.disabled = true;
+  jobFileLabel.textContent = 'Lecture en cours...';
+  jobDescriptionInput.placeholder = 'Extraction de l’offre en cours...';
+  try {
+    const onProgress = (status) => {
+      if (status.phase === 'ocr-recognize') jobFileLabel.textContent = `OCR ${status.progress}%`;
+      else if (status.phase === 'ocr-page') jobFileLabel.textContent = `Page ${status.page}/${status.totalPages}`;
+    };
+    const result = isPDF
+      ? await extractTextFromPDF(file, onProgress)
+      : await extractTextFromImage(file, onProgress);
+    if (!result.text || result.text.trim().length < 20) throw new Error('Texte insuffisant');
+    jobDescriptionInput.value = result.text.trim();
+    jobDescriptionInput.dispatchEvent(new Event('input'));
+    jobFileLabel.textContent = file.name;
+    showToast('Offre extraite et prête à analyser.', 'success');
+  } catch (error) {
+    console.error('Job offer extraction error:', error);
+    jobFileLabel.textContent = 'Importer PDF ou image';
+    showToast('Impossible de lire cette offre. Vous pouvez coller son texte.', 'error');
+  } finally {
+    jobFileInput.disabled = false;
+    jobDescriptionInput.placeholder = 'Collez l’offre complète ici...';
+    jobFileInput.value = '';
+  }
+}
+
 async function handleGenerate() {
   const settings = getSettings();
   if (!settings.apiKey) {
@@ -824,6 +883,7 @@ async function handleGenerate() {
       );
     } else {
       loadingStep3.classList.add('done');
+      loadingStep3.querySelector('.loading-step-icon').textContent = 'check_circle';
       loadingStep3.querySelector('span:last-child').textContent = 'Lettre non demandée';
       setProgress(100);
     }
@@ -853,7 +913,7 @@ async function handleGenerate() {
     newAdaptation.classList.remove('hidden');
 
     refreshLucideIcons();
-    showToast('Votre candidature est prête.', 'success');
+    showToast(includeCoverLetterInput.checked ? 'Votre candidature est prête.' : 'Votre CV est prêt.', 'success');
     launchConfetti();
 
   } catch (err) {
@@ -881,74 +941,8 @@ function renderResults() {
     ? 'Deux documents.<br><em>Un même objectif.</em>'
     : 'Votre CV est prêt.<br><em>Fidèle et ciblé.</em>';
   if (state.adaptedCV) {
-    const cv = state.adaptedCV;
-    let html = '';
-
-    // Personal info
-    if (cv.personalInfo) {
-      const pi = cv.personalInfo;
-      html += `<div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border-light);">`;
-      if (state.profilePhotoDataURL) html += `<img src="${state.profilePhotoDataURL}" alt="" style="width:50px;height:50px;object-fit:cover;border-radius:50%;float:right;margin-left:12px;">`;
-      if (pi.fullName) html += `<div style="font-size:1.15em;font-weight:700;color:var(--text-primary);margin-bottom:4px;">${esc(pi.fullName)}</div>`;
-      if (pi.title) html += `<div style="font-size:0.88em;color:var(--accent-primary);margin-bottom:6px;">${esc(pi.title)}</div>`;
-      const cp = [pi.email, pi.phone, pi.location].filter(Boolean);
-      if (cp.length) html += `<div style="font-size:0.78em;color:var(--text-muted);">${cp.map(c => esc(c)).join(' • ')}</div>`;
-      html += `</div>`;
-    }
-
-    if (cv.matchScore) {
-      const sc = cv.matchScore;
-      const col = sc >= 75 ? '#2e6b4f' : sc >= 50 ? '#8a6a2d' : '#a84242';
-      html += `<div style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-        <strong>Score de correspondance</strong>
-        <span style="background:${col}14;color:${col};padding:3px 12px;border-radius:20px;font-weight:700;font-size:0.88em;border:1px solid ${col}25;">${sc}%</span>
-      </div>`;
-    }
-
-    if (cv.summary) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Profil</strong><br><span style="color:var(--text-secondary);font-size:0.88em;line-height:1.7;">${esc(cv.summary)}</span></div>`;
-    }
-
-    if (cv.keySkills?.length) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Compétences</strong><div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">`;
-      for (const s of cv.keySkills) {
-        html += `<span style="display:inline-block;background:#edf3ee;color:var(--accent-primary);padding:3px 10px;border-radius:20px;font-size:0.76em;border:1px solid #ceddd2;">${esc(s)}</span>`;
-      }
-      html += `</div></div>`;
-    }
-
-    if (cv.experience?.length) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Expérience</strong>`;
-      for (const exp of cv.experience) {
-        html += `<div style="margin-top:10px;padding-left:12px;border-left:2px solid #ceddd2;">
-          <strong style="color:var(--text-primary);font-size:0.92em;">${esc(exp.title || '')}</strong>
-          <div style="color:var(--accent-primary);font-size:0.82em;">${esc(exp.company || '')} ${exp.period ? '· ' + esc(exp.period) : ''}</div>`;
-        if (exp.bullets?.length) {
-          html += '<ul style="margin:6px 0 0 16px;color:var(--text-secondary);font-size:0.85em;">';
-          for (const b of exp.bullets) html += `<li style="margin-bottom:3px;">${esc(b)}</li>`;
-          html += '</ul>';
-        }
-        html += '</div>';
-      }
-      html += '</div>';
-    }
-
-    if (cv.education?.length) {
-      html += `<div style="margin-bottom:14px;"><strong style="color:var(--accent-primary);">Formation</strong>`;
-      for (const edu of cv.education) {
-        html += `<div style="margin-top:6px;padding-left:12px;border-left:2px solid #ceddd2;">
-          <strong style="color:var(--text-primary);font-size:0.9em;">${esc(edu.degree || '')}</strong>
-          <div style="color:var(--accent-primary);font-size:0.82em;">${esc(edu.school || '')} ${edu.period ? '· ' + esc(edu.period) : ''}</div>
-        </div>`;
-      }
-      html += '</div>';
-    }
-
-    if (cv.addedKeywords?.length) {
-      html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);"><strong style="color:var(--text-muted);font-size:0.78em;">Mots-clés ATS</strong><br><span style="color:var(--text-muted);font-size:0.76em;">${cv.addedKeywords.map(k => esc(k)).join(' · ')}</span></div>`;
-    }
-
-    adaptedCVPreview.innerHTML = html;
+    adaptedCVPreview.className = `result-preview cv-live-preview cv-live-${state.cvTemplate}`;
+    adaptedCVPreview.innerHTML = renderLiveCVPreview(state.adaptedCV, state.cvTemplate);
   }
 
   if (state.coverLetter) {
@@ -1175,7 +1169,7 @@ let previewedTemplate = null;
 let previewedType = null;
 
 const TEMPLATE_NAMES = {
-  classic: 'Classique', modern: 'Moderne', minimal: 'Minimaliste',
+  classic: 'Clair', modern: 'Moderne', minimal: 'Minimaliste',
   executive: 'Exécutif', bold: 'Créatif', twentysecond: 'Créatif 2', altacv: 'AltaCV',
   formal: 'Formelle', creative: 'Créative', elegant: 'Élégante',
 };
@@ -1239,17 +1233,20 @@ function renderHistoryList() {
     const item = document.createElement('div');
     item.className = 'history-item';
     const dateStr = new Date(entry.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const score = entry.matchScore ? `<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;">${entry.matchScore}%</span>` : '';
+    const score = entry.matchScore ? `<span class="history-score">${entry.matchScore}%</span>` : '';
+    const documentCount = entry.coverLetter ? 'CV + lettre' : 'CV seul';
     item.innerHTML = `
       <div class="history-item-icon">
-        <span class="material-symbols-outlined">description</span>
+        <span class="material-symbols-rounded">description</span>
       </div>
-      <div style="flex:1;min-width:0;">
-        <div class="history-item-title">${esc(entry.jobTitle || 'Poste non spécifié')} ${entry.companyName ? '@ ' + esc(entry.companyName) : ''}</div>
-        <div class="history-item-meta">${esc(entry.candidateName)} &bull; ${dateStr} ${score}</div>
+      <div class="history-item-copy">
+        <div class="history-item-title">${esc(entry.jobTitle || 'Candidature spontanée')}</div>
+        <div class="history-item-company">${entry.companyName ? esc(entry.companyName) : 'Entreprise non précisée'}</div>
+        <div class="history-item-meta"><span>${dateStr}</span><span>${documentCount}</span>${score}</div>
       </div>
+      <span class="history-open">Ouvrir <span class="material-symbols-rounded">arrow_forward</span></span>
       <button class="history-item-delete" title="Supprimer" data-id="${entry.id}">
-        <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+        <span class="material-symbols-rounded">delete</span>
       </button>
     `;
 
@@ -1326,8 +1323,46 @@ function selectPreviewedTemplate() {
   showToast(`Modèle "${selectedName}" sélectionné`, 'success');
 }
 
+function renderLiveCVPreview(cv, template) {
+  const pi = cv.personalInfo || {};
+  const photo = state.profilePhotoDataURL
+    ? `<img class="cvp-photo" src="${state.profilePhotoDataURL}" alt="Photo de profil">`
+    : '';
+  const contacts = [pi.email, pi.phone, pi.location].filter(Boolean).map(esc).join(' · ');
+  const skills = (cv.keySkills || []).map(skill => `<span>${esc(skill)}</span>`).join('');
+  const experience = (cv.experience || []).map(exp => `
+    <div class="cvp-entry">
+      <div class="cvp-entry-head"><strong>${esc(exp.title || '')}</strong><time>${esc(exp.period || '')}</time></div>
+      <b>${esc(exp.company || '')}</b>
+      ${exp.description ? `<p>${esc(exp.description)}</p>` : ''}
+      ${exp.bullets?.length ? `<ul>${exp.bullets.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
+    </div>`).join('');
+  const education = (cv.education || []).map(edu => `
+    <div class="cvp-entry">
+      <div class="cvp-entry-head"><strong>${esc(edu.degree || '')}</strong><time>${esc(edu.period || '')}</time></div>
+      <b>${esc(edu.school || '')}</b>
+      ${edu.description ? `<p>${esc(edu.description)}</p>` : ''}
+    </div>`).join('');
+  const summary = cv.summary ? `<section><h4>Profil</h4><p>${esc(cv.summary)}</p></section>` : '';
+  const experienceSection = experience ? `<section><h4>${template === 'executive' ? 'Parcours professionnel' : 'Expérience'}</h4>${experience}</section>` : '';
+  const educationSection = education ? `<section><h4>Formation</h4>${education}</section>` : '';
+  const skillsSection = skills ? `<section class="cvp-skills"><h4>${template === 'executive' ? 'Expertises' : 'Compétences'}</h4><div>${skills}</div></section>` : '';
+  const header = `<header>${photo}<div><h3>${esc(pi.fullName || 'Candidat')}</h3><p>${esc(pi.title || '')}</p><small>${contacts}</small></div></header>`;
+
+  if (template === 'modern') {
+    return `<div class="cvp-page"><aside>${photo}<h4>Contact</h4><small>${contacts}</small>${skillsSection}</aside><main>${header.replace(photo, '')}${summary}${experienceSection}${educationSection}</main></div>`;
+  }
+  if (template === 'bold') {
+    return `<div class="cvp-page"><i class="cvp-colorbar"></i>${header}${skillsSection}${summary}${experienceSection}${educationSection}</div>`;
+  }
+  return `<div class="cvp-page">${header}${summary}${template === 'classic' ? skillsSection : ''}${experienceSection}${educationSection}${template !== 'classic' ? skillsSection : ''}</div>`;
+}
+
 function renderTemplatePreview(template, type) {
   // Sample data for preview
+  const previewPhoto = state.profilePhotoDataURL
+    ? `<img class="tpf-photo" src="${state.profilePhotoDataURL}" alt="Photo de profil">`
+    : '';
   const sampleSkills = ['JavaScript', 'Python', 'React', 'Docker', 'SQL', 'Git'];
   const skills = sampleSkills.map(s => `<span class="tpf-badge">${s}</span>`).join('');
   const skillsDark = sampleSkills.map(s => `<span class="tpf-badge tpf-badge-dark">${s}</span>`).join('');
@@ -1347,6 +1382,7 @@ function renderTemplatePreview(template, type) {
         return `<div class="tpf-classic">
           <div class="tpf-topbar"></div>
           <div class="tpf-body">
+            ${previewPhoto}
             <div class="tpf-name">Camille Martin</div>
             <div class="tpf-title">Ingénieur logiciel web</div>
             <div class="tpf-contact">camille.martin@email.com  ·  +33 6 12 34 56  ·  Lyon, France</div>
@@ -1365,16 +1401,16 @@ function renderTemplatePreview(template, type) {
       case 'modern':
         return `<div class="tpf-modern">
           <div class="tpf-sidebar">
-            <div class="tpf-name">Camille Martin</div>
+            ${previewPhoto}
             ${sectionCV('Contact', 'tpf-section-title-dark')}
-            <div class="tpf-text tpf-text-light">✉ jean@email.com</div>
-            <div class="tpf-text tpf-text-light">☎ +33 6 12 34 56</div>
-            <div class="tpf-text tpf-text-light">📍 Paris</div>
+            <div class="tpf-text tpf-text-light">camille@email.com</div>
+            <div class="tpf-text tpf-text-light">+33 6 12 34 56</div>
+            <div class="tpf-text tpf-text-light">Lyon, France</div>
             ${sectionCV('Compétences', 'tpf-section-title-dark')}
             <div style="margin-bottom:4px;">${skillsDark}</div>
             ${sectionCV('Langues', 'tpf-section-title-dark')}
-            <div class="tpf-text tpf-text-light">• Français — Natif</div>
-            <div class="tpf-text tpf-text-light">• Anglais — Courant</div>
+            <div class="tpf-text tpf-text-light">Français · Natif</div>
+            <div class="tpf-text tpf-text-light">Anglais · Courant</div>
           </div>
           <div class="tpf-main">
             <div class="tpf-name">Camille Martin</div>
@@ -1390,61 +1426,50 @@ function renderTemplatePreview(template, type) {
 
       case 'minimal':
         return `<div class="tpf-minimal">
+          ${previewPhoto}
           <div class="tpf-name">Camille Martin</div>
           <div class="tpf-title">Ingénieur logiciel web</div>
-          <div class="tpf-contact">jean@email.com  |  +33 6 12 34 56  |  Paris</div>
+          <div class="tpf-contact">camille@email.com · +33 6 12 34 56 · Lyon</div>
           <div class="tpf-sep"></div>
           <div style="text-align:left;">
             ${sectionCV('Profil')}
             <div class="tpf-text tpf-text-italic">${loremShort}</div>
-            ${sectionCV('Compétences')}
-            <div style="margin-bottom:6px;">${skills}</div>
             ${sectionCV('Expérience')}
             ${expBlock()}
             ${sectionCV('Formation')}
             ${eduBlock()}
+            ${sectionCV('Compétences')}
+            <div style="margin-bottom:6px;">${skills}</div>
           </div>
         </div>`;
 
       case 'executive':
         return `<div class="tpf-executive">
           <div class="tpf-band">
-            <div class="tpf-name">Camille Martin</div>
-            <div class="tpf-title">Ingénieur logiciel web</div>
+            <div><div class="tpf-name">Camille Martin</div><div class="tpf-title">Ingénieur logiciel web</div></div>${previewPhoto}
           </div>
           <div class="tpf-body">
-            <div class="tpf-text" style="font-size:6.5px;color:#8888aa;margin-bottom:8px;">jean@email.com  •  +33 6 12 34 56  •  Paris</div>
-            ${sectionCV('Profil')}
+            <div class="tpf-text" style="font-size:6.5px;color:#68716b;margin-bottom:8px;">camille@email.com · +33 6 12 34 56 · Lyon</div>
+            ${sectionCV('Profil exécutif')}
             <div class="tpf-text tpf-text-italic">${loremShort}</div>
-            ${sectionCV('Compétences')}
-            <div style="margin-bottom:6px;">${skills}</div>
             ${sectionCV('Expérience')}
             ${expBlock()}
             ${sectionCV('Formation')}
             ${eduBlock()}
+            ${sectionCV('Expertises')}
+            <div style="margin-bottom:6px;">${skills}</div>
           </div>
         </div>`;
 
       case 'bold':
         return `<div class="tpf-bold">
-          <div class="tpf-sidebar">
-            <div class="tpf-name">Camille Martin</div>
-            ${sectionCV('Contact', 'tpf-section-title-bold')}
-            <div class="tpf-text tpf-text-white">✉ jean@email.com</div>
-            <div class="tpf-text tpf-text-white">☎ +33 6 12 34 56</div>
-            <div class="tpf-text tpf-text-white">📍 Paris</div>
-            ${sectionCV('Compétences', 'tpf-section-title-bold')}
-            <div style="margin-bottom:4px;">${skillsBold}</div>
-            ${sectionCV('Langues', 'tpf-section-title-bold')}
-            <div class="tpf-text tpf-text-white">• Français — Natif</div>
-            <div class="tpf-text tpf-text-white">• Anglais — Courant</div>
-          </div>
-          <div class="tpf-main">
-            <div class="tpf-name">Camille Martin</div>
-            <div class="tpf-title">Ingénieur logiciel web</div>
+          <div class="tpf-bold-bar"></div>
+          <div class="tpf-body">
+            <div class="tpf-bold-head"><div><div class="tpf-name">Camille Martin</div><div class="tpf-title">Ingénieur logiciel web</div><div class="tpf-contact">camille@email.com · Lyon, France</div></div>${previewPhoto}</div>
+            <div class="tpf-bold-skills"><strong>Compétences clés</strong>${skillsBold}</div>
             ${sectionCV('Profil')}
-            <div class="tpf-text tpf-text-italic">${loremShort}</div>
-            ${sectionCV('Expérience')}
+            <div class="tpf-text">${loremShort}</div>
+            ${sectionCV('Expériences sélectionnées')}
             ${expBlock()}
             ${sectionCV('Formation')}
             ${eduBlock()}

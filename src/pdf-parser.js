@@ -68,6 +68,35 @@ export async function extractTextFromPDF(file, onProgress) {
     };
 }
 
+/**
+ * Extract text from a standalone job-offer image.
+ * @param {File} file
+ * @param {(status: {phase: string, progress: number}) => void} [onProgress]
+ * @returns {Promise<{text: string, method: 'ocr'}>}
+ */
+export async function extractTextFromImage(file, onProgress) {
+    if (onProgress) onProgress({ phase: 'ocr-init', progress: 0 });
+    const worker = await createWorker('fra+eng', 1, {
+        logger: (info) => {
+            if (info.status === 'recognizing text' && onProgress) {
+                onProgress({ phase: 'ocr-recognize', progress: Math.round(info.progress * 100) });
+            }
+        },
+    });
+
+    try {
+        await worker.setParameters({
+            tessedit_pageseg_mode: '3',
+            preserve_interword_spaces: '1',
+        });
+        const { data } = await worker.recognize(file);
+        if (onProgress) onProgress({ phase: 'ocr-done', progress: 100 });
+        return { text: postProcessText(reconstructTextFromOCRData(data)), method: 'ocr' };
+    } finally {
+        await worker.terminate();
+    }
+}
+
 // ============================================================
 // Strategy 1: Spatial-aware text extraction (pdfjs-dist)
 // ============================================================
