@@ -242,13 +242,15 @@ textarea::placeholder, input::placeholder { color: #a4aca6; }
 .cv-live-classic .cvp-page { border-top: 5px solid var(--accent); }
 .cv-live-classic .cvp-page header { display: block; text-align: center; }
 .cv-live-classic .cvp-photo { margin: 0 auto 8px; }
-.cv-live-modern .cvp-page { display: grid; grid-template-columns: 34% 66%; padding: 0; }
+.cv-live-modern .cvp-page { display: grid; grid-template-columns: 36% 64%; padding: 0; }
 .cv-live-modern .cvp-page aside { min-width: 0; padding: 22px 13px; color: white; background: #213a2c; }
 .cv-live-modern .cvp-page aside .cvp-photo { width: 48px; height: 58px; display: block; margin: 0 auto 14px; }
 .cv-live-modern .cvp-page aside h4 { margin: 12px 0 5px; color: white; font-size: 8px; }
-.cv-live-modern .cvp-page aside small { color: rgba(255,255,255,.7); font-size: 6px; overflow-wrap: anywhere; }
+.cvp-sidebar-list { display: grid; gap: 5px; color: rgba(255,255,255,.76); font-size: 6px; line-height: 1.35; }
+.cvp-sidebar-list span { display: block; overflow-wrap: anywhere; }
 .cv-live-modern .cvp-page aside section h4 { border-color: rgba(255,255,255,.2); color: white; }
-.cv-live-modern .cvp-page aside .cvp-skills > div > span { color: white; background: rgba(255,255,255,.13); }
+.cv-live-modern .cvp-page aside .cvp-skills > div { display: grid; gap: 4px; }
+.cv-live-modern .cvp-page aside .cvp-skills > div > span { display: block; padding: 0; color: rgba(255,255,255,.78); background: transparent; font-weight: 500; }
 .cv-live-modern .cvp-page main { min-width: 0; padding: 24px 19px; }
 .cv-live-modern .cvp-page main header { display: block; }
 .cv-live-minimal .cvp-page { padding: 28px 26px; }
@@ -496,9 +498,11 @@ body {
 .tpf-badge { display: inline-block; margin: 2px 2px 2px 0; padding: 2px 6px; border-radius: 9px; color: var(--accent); background: #e7f0e9; font-size: 6px; }
 .tpf-classic .tpf-topbar { height: 7px; background: var(--accent); }
 .tpf-classic .tpf-body { padding-top: 27px; }
-.tpf-modern { display: grid; grid-template-columns: 34% 66%; }
+.tpf-modern { display: grid; grid-template-columns: 36% 64%; }
 .tpf-modern .tpf-sidebar { padding: 28px 18px; color: white; background: #213a2c; }
 .tpf-modern .tpf-main { padding: 30px 24px; }
+.tpf-sidebar-list { display: grid; gap: 5px; color: rgba(255,255,255,.78); font-size: 7px; line-height: 1.35; }
+.tpf-sidebar-list span { display: block; overflow-wrap: anywhere; }
 .tpf-sidebar .tpf-name, .tpf-sidebar .tpf-section-title { color: white; }
 .tpf-avatar { width: 54px; height: 54px; display: grid; place-items: center; margin: 0 auto 18px; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; color: white; background: rgba(255,255,255,.12); font-size: 13px; font-weight: 800; }
 .tpf-photo { width: 54px; height: 64px; display: block; margin: 0 auto 18px; border-radius: 5px; object-fit: contain; background: rgba(255,255,255,.12); }

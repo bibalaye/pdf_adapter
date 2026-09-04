@@ -31,14 +31,14 @@ function renderDatedEntry(title, period, subtitle, description = '', bullets = [
 \\end{minipage}\\hfill
 \\begin{minipage}[t]{0.27\\linewidth}
 \\raggedleft{\\small\\textit{${escapeLatex(period || '')}}}
-\\end{minipage}`;
-    if (description) block += `\n\\smallskip\n${escapeLatex(description)}`;
+\\end{minipage}\\par`;
+    if (description) block += `\n\\smallskip\n\\noindent ${escapeLatex(description)}\\par`;
     if (bullets?.length) {
         block += `\n\\begin{itemize}[leftmargin=1.15em,nosep,topsep=3pt]`;
         bullets.forEach(item => { block += `\n  \\item ${escapeLatex(item)}`; });
         block += '\n\\end{itemize}';
     }
-    return block;
+    return `${block}\n\\par`;
 }
 
 /**
@@ -208,10 +208,13 @@ function generateDistinctStandardTemplate(cvData, name, template, photoSetup, ph
     };
     const palette = palettes[template];
     const photo = hasPhoto ? `${bs}includegraphics[width=2.6cm,height=3.1cm,keepaspectratio]{profile-photo.${photoExtension}}` : '';
-    const contacts = [pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website]
-        .filter(Boolean).map(escapeLatex).join(` ${bs}enspace | ${bs}enspace `);
-    const skills = escapeLatexArray(cvData.keySkills || []).join(` ${bs}enspace ${bs}textbullet ${bs}enspace `);
-    const languages = escapeLatexArray(cvData.languages || []).join(', ');
+    const contactItems = [pi.email, pi.phone, pi.location, pi.linkedin, pi.github, pi.website]
+        .filter(Boolean).map(escapeLatex);
+    const contacts = contactItems.join(` ${bs}enspace | ${bs}enspace `);
+    const skillItems = escapeLatexArray(cvData.keySkills || []);
+    const skills = skillItems.join(` ${bs}enspace ${bs}textbullet ${bs}enspace `);
+    const languageItems = escapeLatexArray(cvData.languages || []);
+    const languages = languageItems.join(', ');
     const certifications = escapeLatexArray(cvData.certifications || []);
     const experience = (cvData.experience || []).map(exp =>
         renderDatedEntry(exp.title, exp.period, exp.company, exp.description, exp.bullets)
@@ -226,15 +229,26 @@ function generateDistinctStandardTemplate(cvData, name, template, photoSetup, ph
     let body;
 
     if (template === 'modern') {
+        const sidebarList = items => items.map(item => `${bs}noindent ${item}${bs}par${bs}smallskip`).join('\n');
         const sidebar = [
             photo ? `${bs}begin{center}${photo}${bs}end{center}${bs}medskip` : '',
-            `{${bs}Large${bs}bfseries Contact}${bs}par${bs}smallskip`,
-            `{${bs}small ${contacts || 'Coordonnées disponibles'}}`,
-            skills ? `${bs}medskip{${bs}large${bs}bfseries Compétences}${bs}par${bs}smallskip{${bs}small ${skills}}` : '',
-            languages ? `${bs}medskip{${bs}large${bs}bfseries Langues}${bs}par${bs}smallskip{${bs}small ${languages}}` : '',
-            certifications.length ? `${bs}medskip{${bs}large${bs}bfseries Certifications}${bs}par${bs}smallskip{${bs}small ${certifications.join(`${bs}${bs}[3pt]`)}}` : '',
+            `{${bs}large${bs}bfseries Contact}${bs}par${bs}smallskip`,
+            `{${bs}footnotesize ${sidebarList(contactItems.length ? contactItems : ['Coordonnées disponibles'])}}`,
+            skillItems.length ? `${bs}medskip{${bs}large${bs}bfseries Compétences}${bs}par${bs}smallskip{${bs}footnotesize ${sidebarList(skillItems)}}` : '',
+            languageItems.length ? `${bs}medskip{${bs}large${bs}bfseries Langues}${bs}par${bs}smallskip{${bs}footnotesize ${sidebarList(languageItems)}}` : '',
+            certifications.length ? `${bs}medskip{${bs}large${bs}bfseries Certifications}${bs}par${bs}smallskip{${bs}footnotesize ${sidebarList(certifications)}}` : '',
         ].filter(Boolean).join('\n');
-        body = `${bs}noindent${bs}begin{minipage}[t]{0.31${bs}textwidth}${bs}colorbox{header}{${bs}parbox[t][0.86${bs}textheight][t]{${bs}dimexpr${bs}linewidth-2${bs}fboxsep}{${bs}color{white}${bs}vspace{0.3cm}${sidebar}}}${bs}end{minipage}${bs}hfill${bs}begin{minipage}[t]{0.64${bs}textwidth}\n{${bs}Huge${bs}bfseries ${escapeLatex(name)}}${bs}par\n{${bs}Large${bs}color{primary} ${escapeLatex(pi.title || '')}}${bs}par${bs}vspace{0.3cm}\n${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expérience', experience)}${section('Formation', education)}${section('Projets', projects)}\n${bs}end{minipage}`;
+        body = `${bs}columnratio{0.31}
+${bs}setlength{${bs}columnsep}{1.15cm}
+${bs}begin{paracol}{2}
+${bs}color{white}${bs}raggedright
+${sidebar}
+${bs}switchcolumn
+${bs}color{textdark}
+{${bs}Huge${bs}bfseries ${escapeLatex(name)}}${bs}par
+{${bs}Large${bs}color{primary} ${escapeLatex(pi.title || '')}}${bs}par${bs}vspace{0.3cm}
+${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expérience', experience)}${section('Formation', education)}${section('Projets', projects)}
+${bs}end{paracol}`;
     } else if (template === 'minimal') {
         body = `${bs}begin{center}${photo ? `\n${photo}${bs}${bs}[0.25cm]` : ''}\n{${bs}huge${bs}bfseries ${escapeLatex(name)}}${bs}par\n{${bs}large ${escapeLatex(pi.title || '')}}${bs}par${bs}smallskip\n{${bs}small${bs}color{softtext} ${contacts}}${bs}par${bs}end{center}${bs}vspace{0.45cm}\n${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expérience', experience)}${section('Formation', education)}${skills ? section('Compétences', skills) : ''}${certifications.length ? section('Certifications', certifications.join(` ${bs}enspace | ${bs}enspace `)) : ''}`;
     } else if (template === 'executive') {
@@ -243,7 +257,14 @@ function generateDistinctStandardTemplate(cvData, name, template, photoSetup, ph
         body = `${bs}noindent{${bs}color{primary}${bs}rule{${bs}textwidth}{8pt}}${bs}par${bs}vspace{0.35cm}\n${bs}noindent${bs}begin{minipage}[t]{0.72${bs}textwidth}{${bs}fontsize{28pt}{31pt}${bs}selectfont${bs}bfseries ${escapeLatex(name)}}${bs}${bs}[5pt]{${bs}Large${bs}color{primary} ${escapeLatex(pi.title || '')}}${bs}${bs}[8pt]{${bs}small ${contacts}}${bs}end{minipage}${bs}hfill${photo ? `${bs}begin{minipage}[t]{0.22${bs}textwidth}${bs}raggedleft ${photo}${bs}end{minipage}` : ''}${bs}vspace{0.4cm}\n${skills ? `${bs}noindent${bs}colorbox{soft}{${bs}parbox{${bs}dimexpr${bs}textwidth-2${bs}fboxsep}{${bs}textbf{Compétences clés}${bs}quad ${skills}}}${bs}vspace{0.25cm}` : ''}\n${section('Profil', escapeLatex(cvData.summary || ''))}${section('Expériences sélectionnées', experience)}${section('Formation', education)}${section('Projets', projects)}${certifications.length ? section('Certifications', certifications.join(` ${bs}enspace | ${bs}enspace `)) : ''}`;
     }
 
-    return `${bs}documentclass[10pt,a4paper]{article}\n${bs}usepackage[utf8]{inputenc}\n${bs}usepackage[T1]{fontenc}\n${bs}usepackage{lmodern}\n${bs}usepackage{geometry}\n${bs}geometry{left=1.45cm,right=1.45cm,top=1.45cm,bottom=1.45cm}\n${bs}usepackage{xcolor}\n${bs}usepackage{titlesec}\n${bs}usepackage{enumitem}\n${bs}usepackage{hyperref}\n${bs}usepackage{parskip}\n${photoSetup}\n${bs}definecolor{primary}{RGB}{${palette[0]}}\n${bs}definecolor{textdark}{RGB}{31,39,34}\n${bs}definecolor{softtext}{RGB}{103,113,106}\n${bs}definecolor{header}{RGB}{${palette[1]}}\n${bs}definecolor{soft}{RGB}{${palette[2]}}\n${bs}hypersetup{colorlinks=true,urlcolor=primary,pdftitle={CV - ${escapeLatex(name)}}}\n${bs}titleformat{${bs}section}{${bs}Large${bs}bfseries${bs}color{${template === 'minimal' ? 'textdark' : 'primary'}}}{}{0em}{}${template === 'minimal' ? '' : `[${bs}titlerule]`}\n${bs}titlespacing{${bs}section}{0pt}{11pt}{5pt}\n${bs}renewcommand{${bs}familydefault}{${bs}sfdefault}\n${bs}begin{document}\n${bs}pagestyle{empty}\n${body}\n${bs}end{document}\n`;
+    const modernPackages = template === 'modern'
+        ? `${bs}usepackage{paracol}\n${bs}usepackage{tikz}\n${bs}usepackage{eso-pic}\n`
+        : '';
+    const modernBackground = template === 'modern'
+        ? `${bs}AddToShipoutPictureBG{${bs}begin{tikzpicture}[remember picture,overlay]${bs}fill[header] (current page.north west) rectangle ([xshift=0.36${bs}paperwidth]current page.south west);${bs}end{tikzpicture}}\n`
+        : '';
+
+    return `${bs}documentclass[10pt,a4paper]{article}\n${bs}usepackage[utf8]{inputenc}\n${bs}usepackage[T1]{fontenc}\n${bs}usepackage{lmodern}\n${bs}usepackage{geometry}\n${bs}geometry{left=1.25cm,right=1.45cm,top=1.25cm,bottom=1.25cm}\n${bs}usepackage{xcolor}\n${bs}usepackage{titlesec}\n${bs}usepackage{enumitem}\n${bs}usepackage{hyperref}\n${bs}usepackage{parskip}\n${modernPackages}${photoSetup}\n${bs}definecolor{primary}{RGB}{${palette[0]}}\n${bs}definecolor{textdark}{RGB}{31,39,34}\n${bs}definecolor{softtext}{RGB}{103,113,106}\n${bs}definecolor{header}{RGB}{${palette[1]}}\n${bs}definecolor{soft}{RGB}{${palette[2]}}\n${bs}hypersetup{colorlinks=true,urlcolor=primary,pdftitle={CV - ${escapeLatex(name)}}}\n${bs}titleformat{${bs}section}{${bs}Large${bs}bfseries${bs}color{${template === 'minimal' ? 'textdark' : 'primary'}}}{}{0em}{}${template === 'minimal' ? '' : `[${bs}titlerule]`}\n${bs}titlespacing{${bs}section}{0pt}{11pt}{5pt}\n${bs}renewcommand{${bs}familydefault}{${bs}sfdefault}\n${modernBackground}${bs}begin{document}\n${bs}pagestyle{empty}\n${body}\n${bs}end{document}\n`;
 }
 
 /**

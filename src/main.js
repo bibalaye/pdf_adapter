@@ -1380,6 +1380,7 @@ function renderLiveCVPreview(cv, template) {
     ? `<img class="cvp-photo" src="${state.profilePhotoDataURL}" alt="Photo de profil">`
     : '';
   const contacts = [pi.email, pi.phone, pi.location].filter(Boolean).map(esc).join(' · ');
+  const contactLines = [pi.email, pi.phone, pi.location].filter(Boolean).map(value => `<span>${esc(value)}</span>`).join('');
   const skills = (cv.keySkills || []).map(skill => `<span>${esc(skill)}</span>`).join('');
   const experience = (cv.experience || []).map(exp => `
     <div class="cvp-entry">
@@ -1401,7 +1402,7 @@ function renderLiveCVPreview(cv, template) {
   const header = `<header>${photo}<div><h3>${esc(pi.fullName || 'Candidat')}</h3><p>${esc(pi.title || '')}</p><small>${contacts}</small></div></header>`;
 
   if (template === 'modern') {
-    return `<div class="cvp-page"><aside>${photo}<h4>Contact</h4><small>${contacts}</small>${skillsSection}</aside><main>${header.replace(photo, '')}${summary}${experienceSection}${educationSection}</main></div>`;
+    return `<div class="cvp-page"><aside>${photo}<h4>Contact</h4><div class="cvp-sidebar-list">${contactLines}</div>${skillsSection}</aside><main>${header.replace(photo, '')}${summary}${experienceSection}${educationSection}</main></div>`;
   }
   if (template === 'bold') {
     return `<div class="cvp-page"><i class="cvp-colorbar"></i>${header}${skillsSection}${summary}${experienceSection}${educationSection}</div>`;
@@ -1454,14 +1455,11 @@ function renderTemplatePreview(template, type) {
           <div class="tpf-sidebar">
             ${previewPhoto}
             ${sectionCV('Contact', 'tpf-section-title-dark')}
-            <div class="tpf-text tpf-text-light">camille@email.com</div>
-            <div class="tpf-text tpf-text-light">+33 6 12 34 56</div>
-            <div class="tpf-text tpf-text-light">Lyon, France</div>
+            <div class="tpf-sidebar-list"><span>camille@email.com</span><span>+33 6 12 34 56</span><span>Lyon, France</span></div>
             ${sectionCV('Compétences', 'tpf-section-title-dark')}
-            <div style="margin-bottom:4px;">${skillsDark}</div>
+            <div class="tpf-sidebar-list">${sampleSkills.map(skill => `<span>${skill}</span>`).join('')}</div>
             ${sectionCV('Langues', 'tpf-section-title-dark')}
-            <div class="tpf-text tpf-text-light">Français · Natif</div>
-            <div class="tpf-text tpf-text-light">Anglais · Courant</div>
+            <div class="tpf-sidebar-list"><span>Français · Natif</span><span>Anglais · Courant</span></div>
           </div>
           <div class="tpf-main">
             <div class="tpf-name">Camille Martin</div>
