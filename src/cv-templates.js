@@ -27,7 +27,7 @@ function escapeLatexArray(arr) {
 /**
  * Standard templates (Classic, Modern, Executive, Bold)
  */
-export function generateStandardTemplate(cvData, candidateName, template = 'classic', profilePhotoLatex = '') {
+export function generateStandardTemplate(cvData, candidateName, template = 'classic', profilePhotoDataURL = '') {
     const pi = cvData.personalInfo || {};
     const name = pi.fullName || candidateName || 'Candidat';
 
@@ -40,6 +40,29 @@ export function generateStandardTemplate(cvData, candidateName, template = 'clas
         primaryColor = '225, 112, 85';
     }
 
+    const photoExtension = profilePhotoDataURL.startsWith('data:image/png') ? 'png' : 'jpg';
+    const photoBase64 = profilePhotoDataURL.includes(',') ? profilePhotoDataURL.split(',')[1] : '';
+    const photoSetup = photoBase64 ? `\\usepackage{graphicx}
+\\directlua{
+local data = [[${photoBase64}]]
+local chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local output = table.pack()
+for index = 1, string.len(data), 4 do
+  local c1, c2, c3, c4 = data:sub(index, index), data:sub(index + 1, index + 1), data:sub(index + 2, index + 2), data:sub(index + 3, index + 3)
+  local a = chars:find(c1, 1, true) - 1
+  local b = chars:find(c2, 1, true) - 1
+  local c = c3 == '=' and 0 or chars:find(c3, 1, true) - 1
+  local d = c4 == '=' and 0 or chars:find(c4, 1, true) - 1
+  local value = a * 262144 + b * 4096 + c * 64 + d
+  table.insert(output, string.char(math.floor(value / 65536)))
+  if c3 ~= '=' then table.insert(output, string.char(math.fmod(math.floor(value / 256), 256))) end
+  if c4 ~= '=' then table.insert(output, string.char(math.fmod(value, 256))) end
+end
+local file = assert(io.open('profile-photo.${photoExtension}', 'wb'))
+file:write(table.concat(output))
+file:close()
+}` : '';
+
     let tex = `\\documentclass[11pt,a4paper,sans]{article}
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -51,7 +74,7 @@ export function generateStandardTemplate(cvData, candidateName, template = 'clas
 \\usepackage{enumitem}
 \\usepackage{hyperref}
 \\usepackage{parskip}
-${profilePhotoLatex ? '\\usepackage{tikz}' : ''}
+${photoSetup}
 
 \\definecolor{primary}{RGB}{${primaryColor}}
 \\definecolor{textdark}{RGB}{50, 50, 50}
@@ -74,7 +97,7 @@ ${profilePhotoLatex ? '\\usepackage{tikz}' : ''}
 \\pagestyle{empty}
 
 {\\begin{center}
-${profilePhotoLatex ? `${profilePhotoLatex} \\\\[0.2cm]` : ''}
+${photoBase64 ? `\\includegraphics[width=2.8cm,height=3.4cm,keepaspectratio]{profile-photo.${photoExtension}} \\\\[0.2cm]` : ''}
 {\\Huge \\bfseries \\color{textdark} ${escapeLatex(name)}} \\\\[0.2cm]
 `;
 

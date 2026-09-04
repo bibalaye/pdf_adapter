@@ -11,7 +11,7 @@ import {
     generateMaltaTemplate, 
     generateMyCVTemplate,
     generateCoverLetterTemplate 
-} from './cv-templates';
+} from './cv-templates.js';
 
 // Re-export escape utility for convenience in other files
 export { escapeLatex };
@@ -20,7 +20,7 @@ export { escapeLatex };
  * Generate adapted CV in LaTeX format
  * Orchestrates calls to specific template functions
  */
-export function generateAdaptedCVPDF(cvData, candidateName = '', profilePhotoLatex = '', template = 'classic') {
+export function generateAdaptedCVPDF(cvData, candidateName = '', profilePhotoDataURL = '', template = 'classic') {
     if (template === 'twentysecond') {
         return generateTwentySecondTemplate(cvData, candidateName);
     }
@@ -35,7 +35,7 @@ export function generateAdaptedCVPDF(cvData, candidateName = '', profilePhotoLat
     }
     
     // Returns Classic, Modern, Executive, or Bold
-    return generateStandardTemplate(cvData, candidateName, template, profilePhotoLatex);
+    return generateStandardTemplate(cvData, candidateName, template, profilePhotoDataURL);
 }
 
 /**
@@ -57,7 +57,7 @@ export function downloadPDF(texContent, filename) {
 /**
  * Returns the appropriate LaTeX engine for a given template
  */
-export function getEngineForTemplate(template) {
-    if (template === 'altacv' || template === 'maltacv') return 'lualatex';
+export function getEngineForTemplate(template, hasPhoto = false) {
+    if (hasPhoto || template === 'altacv' || template === 'maltacv') return 'lualatex';
     return 'pdflatex';
 }

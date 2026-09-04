@@ -32,7 +32,6 @@ const state = {
   adaptedCV: null,
   coverLetter: null,
   profilePhotoDataURL: null,
-  profilePhotoLatex: '',
   cvTemplate: 'classic',
   letterTemplate: 'formal',
 };
@@ -81,6 +80,10 @@ const generateBtn = $('#generateBtn');
 const changeCVBtn = $('#changeCVBtn');
 const savedCVName = $('#savedCVName');
 const savedCVMeta = $('#savedCVMeta');
+const includeCoverLetterInput = $('#includeCoverLetter');
+const coverLetterResult = $('#coverLetterResult');
+const resultEyebrow = $('#resultEyebrow');
+const resultTitle = $('#resultTitle');
 const cvTemplateGrid = $('#cvTemplateGrid');
 const letterTemplateGrid = $('#letterTemplateGrid');
 const templatePreviewModal = $('#templatePreviewModal');
@@ -155,6 +158,7 @@ function init() {
   initParticles();
   refreshLucideIcons();
   updateHistoryBadge();
+  updateGenerationChoice();
   restoreSavedCV();
 }
 
@@ -374,6 +378,7 @@ function setupEventListeners() {
   });
 
   jobTitleInput.addEventListener('input', updateGenerateButton);
+  includeCoverLetterInput.addEventListener('change', updateGenerationChoice);
 
   // --- Template Selection ---
   if (cvTemplateGrid) {
@@ -504,26 +509,18 @@ function handleProfilePhotoUpload(file) {
   }
 
   const reader = new FileReader();
-  reader.onload = async (e) => {
+  reader.onload = (e) => {
     state.profilePhotoDataURL = e.target.result;
     profilePhotoPreview.innerHTML = `<img src="${e.target.result}" alt="Photo de profil" />`;
     profilePhotoPreview.classList.add('has-photo');
     removeProfilePhotoBtn.classList.remove('hidden');
-    try {
-      state.profilePhotoLatex = await createInlinePhotoLatex(e.target.result);
-      showToast('Photo ajoutée au CV.', 'success');
-    } catch (error) {
-      console.error('Photo conversion error:', error);
-      removeProfilePhoto(false);
-      showToast('Cette image ne peut pas être utilisée.', 'error');
-    }
+    showToast('Photo originale ajoutée au CV.', 'success');
   };
   reader.readAsDataURL(file);
 }
 
 function removeProfilePhoto(showNotification = true) {
   state.profilePhotoDataURL = null;
-  state.profilePhotoLatex = '';
   profilePhotoPreview.innerHTML = '';
   profilePhotoPreview.classList.remove('has-photo');
   removeProfilePhotoBtn.classList.add('hidden');
@@ -535,50 +532,6 @@ function removeProfilePhoto(showNotification = true) {
   icon.textContent = 'add_a_photo';
   profilePhotoPreview.appendChild(icon);
   if (showNotification) showToast('Photo supprimée.', 'info');
-}
-
-function createInlinePhotoLatex(dataURL) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      const size = 32;
-      const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      const crop = Math.min(image.naturalWidth, image.naturalHeight);
-      const sourceX = (image.naturalWidth - crop) / 2;
-      const sourceY = (image.naturalHeight - crop) / 2;
-      context.drawImage(image, sourceX, sourceY, crop, crop, 0, 0, size, size);
-      const pixels = context.getImageData(0, 0, size, size).data;
-      const lines = ['\\begin{tikzpicture}[x=0.0625cm,y=0.0625cm]', '\\clip (16,16) circle (16);'];
-
-      for (let y = 0; y < size; y++) {
-        let runStart = 0;
-        let previous = '';
-        for (let x = 0; x <= size; x++) {
-          let color = '';
-          if (x < size) {
-            const index = (y * size + x) * 4;
-            const quantize = (value) => Math.min(255, Math.round(value / 24) * 24);
-            color = `${quantize(pixels[index])},${quantize(pixels[index + 1])},${quantize(pixels[index + 2])}`;
-          }
-          if (x > 0 && color !== previous) {
-            const [red, green, blue] = previous.split(',');
-            const latexY = size - y - 1;
-            lines.push(`\\fill[fill={rgb,255:red,${red};green,${green};blue,${blue}},draw=none] (${runStart},${latexY}) rectangle (${x},${latexY + 1});`);
-            runStart = x;
-          }
-          previous = color;
-        }
-      }
-
-      lines.push('\\end{tikzpicture}');
-      resolve(lines.join('\n'));
-    };
-    image.onerror = reject;
-    image.src = dataURL;
-  });
 }
 
 // ============================================================
@@ -789,6 +742,13 @@ function updateGenerateButton() {
   generateBtn.disabled = jobDescriptionInput.value.trim().length <= 20;
 }
 
+function updateGenerationChoice() {
+  const withLetter = includeCoverLetterInput.checked;
+  const labelNode = [...generateBtn.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+  if (labelNode) labelNode.textContent = withLetter ? ' Générer ma candidature ' : ' Générer mon CV ';
+  includeCoverLetterInput.closest('.letter-toggle')?.classList.toggle('is-disabled', !withLetter);
+}
+
 async function handleGenerate() {
   const settings = getSettings();
   if (!settings.apiKey) {
@@ -813,6 +773,7 @@ async function handleGenerate() {
   newAdaptation.classList.add('hidden');
 
   [loadingStep1, loadingStep2, loadingStep3].forEach((el) => el.classList.remove('active', 'done'));
+  loadingStep3.querySelector('span:last-child').textContent = 'Rédiger la lettre';
   setProgress(5);
 
   try {
@@ -843,23 +804,29 @@ async function handleGenerate() {
 
     state.adaptedCV = cvResult;
 
-    loadingStep3.classList.add('active');
-    loadingTitle.textContent = 'Rédaction de la lettre de motivation...';
-    setProgress(75);
-
-    const letterResult = await generateCoverLetter(
-      state.extractedText,
-      jobDescription,
-      jobTitle,
-      companyName,
-      (progress) => {
-        if (progress === 'letter-done') {
-          loadingStep3.classList.remove('active');
-          loadingStep3.classList.add('done');
-          setProgress(100);
+    let letterResult = null;
+    if (includeCoverLetterInput.checked) {
+      loadingStep3.classList.add('active');
+      loadingTitle.textContent = 'Rédaction de la lettre de motivation...';
+      setProgress(75);
+      letterResult = await generateCoverLetter(
+        state.extractedText,
+        jobDescription,
+        jobTitle,
+        companyName,
+        (progress) => {
+          if (progress === 'letter-done') {
+            loadingStep3.classList.remove('active');
+            loadingStep3.classList.add('done');
+            setProgress(100);
+          }
         }
-      }
-    );
+      );
+    } else {
+      loadingStep3.classList.add('done');
+      loadingStep3.querySelector('span:last-child').textContent = 'Lettre non demandée';
+      setProgress(100);
+    }
 
     state.coverLetter = letterResult;
 
@@ -907,6 +874,12 @@ function setProgress(percent) {
 // Render Results
 // ============================================================
 function renderResults() {
+  coverLetterResult.classList.toggle('hidden', !state.coverLetter);
+  resultsState.classList.toggle('cv-only', !state.coverLetter);
+  resultEyebrow.textContent = state.coverLetter ? 'Candidature prête' : 'CV prêt';
+  resultTitle.innerHTML = state.coverLetter
+    ? 'Deux documents.<br><em>Un même objectif.</em>'
+    : 'Votre CV est prêt.<br><em>Fidèle et ciblé.</em>';
   if (state.adaptedCV) {
     const cv = state.adaptedCV;
     let html = '';
@@ -1012,7 +985,7 @@ function handleDownloadCV() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
-    const doc = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoLatex, state.cvTemplate);
+    const doc = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
     const jobTitle = jobTitleInput.value.trim() || 'poste';
     const safe = jobTitle.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿçæœ\s-]/g, '').replace(/\s+/g, '_').substring(0, 30);
     downloadPDF(doc, `CV_Adapte_${safe}.pdf`);
@@ -1043,11 +1016,11 @@ async function handlePreviewCVCode() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
-    const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoLatex, state.cvTemplate);
+    const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
 
     // Set engine
     const engineInput = latexForm.querySelector('input[name="engine"]');
-    if (engineInput) engineInput.value = getEngineForTemplate(state.cvTemplate);
+    if (engineInput) engineInput.value = getEngineForTemplate(state.cvTemplate, Boolean(state.profilePhotoDataURL));
 
     // Clean up any previously injected companion files
     latexForm.querySelectorAll('.aux-file-field').forEach(el => el.remove());
@@ -1090,7 +1063,7 @@ async function handlePreviewCVCode() {
     latexLoading.style.opacity = '1';
 
     // Update loading message for lualatex templates (slower)
-    const engine = getEngineForTemplate(state.cvTemplate);
+    const engine = getEngineForTemplate(state.cvTemplate, Boolean(state.profilePhotoDataURL));
     const loadingMsg = document.querySelector('#latexLoading p');
     if (loadingMsg) {
       loadingMsg.textContent = engine === 'lualatex'
@@ -1293,6 +1266,8 @@ function renderHistoryList() {
       state.adaptedCV = entry.adaptedCV;
       state.coverLetter = entry.coverLetter;
       state.cvTemplate = entry.cvTemplate || 'classic';
+      includeCoverLetterInput.checked = Boolean(entry.coverLetter);
+      updateGenerationChoice();
       jobTitleInput.value = entry.jobTitle || '';
       companyNameInput.value = entry.companyName || '';
       historyModal.classList.add('hidden');
@@ -1335,6 +1310,7 @@ function closeTemplatePreview() {
 
 function selectPreviewedTemplate() {
   if (!previewedTemplate || !previewedType) return;
+  const selectedName = TEMPLATE_NAMES[previewedTemplate] || previewedTemplate;
   if (previewedType === 'cv') {
     state.cvTemplate = previewedTemplate;
     cvTemplateGrid.querySelectorAll('.template-card').forEach(c => {
@@ -1347,7 +1323,7 @@ function selectPreviewedTemplate() {
     });
   }
   closeTemplatePreview();
-  showToast(`Modèle "${TEMPLATE_NAMES[previewedTemplate]}" sélectionné`, 'success');
+  showToast(`Modèle "${selectedName}" sélectionné`, 'success');
 }
 
 function renderTemplatePreview(template, type) {
@@ -1358,10 +1334,10 @@ function renderTemplatePreview(template, type) {
   const skillsBold = sampleSkills.map(s => `<span class="tpf-badge tpf-badge-bold">${s}</span>`).join('');
 
   const sectionCV = (title, cls = '') => `<div class="tpf-section-title ${cls}">${title}</div>`;
-  const loremShort = 'Ingénieur passionné avec 5+ ans d\'expérience en développement web.';
-  const loremBullets = '• Développement d\'applications web full-stack avec React et Node.js<br>• Mise en place de pipelines CI/CD avec Docker et GitLab<br>• Optimisation des performances et qualité du code';
-  const expBlock = (cls = '') => `<div style="margin-bottom:6px;"><div style="font-weight:700;font-size:7.5px;color:#2d2d40;">Ingénieur Full Stack</div><div style="font-size:6.5px;color:#4338ca;">Entreprise SAS — 2021–2024</div><div class="tpf-text ${cls}" style="margin-top:2px;">${loremBullets}</div></div>`;
-  const eduBlock = (cls = '') => `<div style="margin-bottom:4px;"><div style="font-weight:700;font-size:7px;color:#2d2d40;">Master Informatique</div><div style="font-size:6.5px;color:#4338ca;">Université Paris — 2019</div></div>`;
+  const loremShort = 'Ingénieur logiciel orienté produit, spécialisé dans la conception d’interfaces web fiables et accessibles.';
+  const loremBullets = '<span class="tpf-bullet">Conception et évolution d’applications web avec React et Node.js</span><span class="tpf-bullet">Mise en place de pipelines CI/CD avec Docker et GitLab</span><span class="tpf-bullet">Amélioration continue des performances et de la qualité du code</span>';
+  const expBlock = (cls = '') => `<div style="margin-bottom:8px;"><div style="font-weight:700;font-size:7.5px;color:#233028;">Ingénieur logiciel</div><div style="font-size:6.5px;color:#2e6b4f;">Atelier Numérique · 2021–2024</div><div class="tpf-text ${cls}" style="margin-top:4px;">${loremBullets}</div></div>`;
+  const eduBlock = () => `<div style="margin-bottom:4px;"><div style="font-weight:700;font-size:7px;color:#233028;">Master Informatique</div><div style="font-size:6.5px;color:#2e6b4f;">Université de Lyon · 2019</div></div>`;
 
   const letterBody = 'Madame, Monsieur,<br><br>Fortement intéressé par le poste de Développeur Full Stack au sein de votre entreprise, je me permets de vous soumettre ma candidature.<br><br>Fort de 5 années d\'expérience en développement web, j\'ai acquis une expertise solide en React, Node.js et DevOps. Mon parcours m\'a permis de mener des projets ambitieux alliant innovation technique et rigueur méthodologique.<br><br>Je serais ravi d\'échanger avec vous lors d\'un entretien.<br><br>Cordialement,<br>Jean Dupont';
 
@@ -1371,9 +1347,9 @@ function renderTemplatePreview(template, type) {
         return `<div class="tpf-classic">
           <div class="tpf-topbar"></div>
           <div class="tpf-body">
-            <div class="tpf-name">Jean Dupont</div>
-            <div class="tpf-title">Ingénieur Full Stack</div>
-            <div class="tpf-contact">jean.dupont@email.com  •  +33 6 12 34 56  •  Paris, France</div>
+            <div class="tpf-name">Camille Martin</div>
+            <div class="tpf-title">Ingénieur logiciel web</div>
+            <div class="tpf-contact">camille.martin@email.com  ·  +33 6 12 34 56  ·  Lyon, France</div>
             <div class="tpf-divider"></div>
             ${sectionCV('Profil')}
             <div class="tpf-text tpf-text-italic">${loremShort}</div>
@@ -1389,7 +1365,7 @@ function renderTemplatePreview(template, type) {
       case 'modern':
         return `<div class="tpf-modern">
           <div class="tpf-sidebar">
-            <div class="tpf-name">Jean Dupont</div>
+            <div class="tpf-name">Camille Martin</div>
             ${sectionCV('Contact', 'tpf-section-title-dark')}
             <div class="tpf-text tpf-text-light">✉ jean@email.com</div>
             <div class="tpf-text tpf-text-light">☎ +33 6 12 34 56</div>
@@ -1401,8 +1377,8 @@ function renderTemplatePreview(template, type) {
             <div class="tpf-text tpf-text-light">• Anglais — Courant</div>
           </div>
           <div class="tpf-main">
-            <div class="tpf-name">Jean Dupont</div>
-            <div class="tpf-title">Ingénieur Full Stack</div>
+            <div class="tpf-name">Camille Martin</div>
+            <div class="tpf-title">Ingénieur logiciel web</div>
             ${sectionCV('Profil')}
             <div class="tpf-text tpf-text-italic">${loremShort}</div>
             ${sectionCV('Expérience')}
@@ -1414,8 +1390,8 @@ function renderTemplatePreview(template, type) {
 
       case 'minimal':
         return `<div class="tpf-minimal">
-          <div class="tpf-name">Jean Dupont</div>
-          <div class="tpf-title">Ingénieur Full Stack</div>
+          <div class="tpf-name">Camille Martin</div>
+          <div class="tpf-title">Ingénieur logiciel web</div>
           <div class="tpf-contact">jean@email.com  |  +33 6 12 34 56  |  Paris</div>
           <div class="tpf-sep"></div>
           <div style="text-align:left;">
@@ -1433,8 +1409,8 @@ function renderTemplatePreview(template, type) {
       case 'executive':
         return `<div class="tpf-executive">
           <div class="tpf-band">
-            <div class="tpf-name">Jean Dupont</div>
-            <div class="tpf-title">Ingénieur Full Stack</div>
+            <div class="tpf-name">Camille Martin</div>
+            <div class="tpf-title">Ingénieur logiciel web</div>
           </div>
           <div class="tpf-body">
             <div class="tpf-text" style="font-size:6.5px;color:#8888aa;margin-bottom:8px;">jean@email.com  •  +33 6 12 34 56  •  Paris</div>
@@ -1452,7 +1428,7 @@ function renderTemplatePreview(template, type) {
       case 'bold':
         return `<div class="tpf-bold">
           <div class="tpf-sidebar">
-            <div class="tpf-name">Jean Dupont</div>
+            <div class="tpf-name">Camille Martin</div>
             ${sectionCV('Contact', 'tpf-section-title-bold')}
             <div class="tpf-text tpf-text-white">✉ jean@email.com</div>
             <div class="tpf-text tpf-text-white">☎ +33 6 12 34 56</div>
@@ -1464,8 +1440,8 @@ function renderTemplatePreview(template, type) {
             <div class="tpf-text tpf-text-white">• Anglais — Courant</div>
           </div>
           <div class="tpf-main">
-            <div class="tpf-name">Jean Dupont</div>
-            <div class="tpf-title">Ingénieur Full Stack</div>
+            <div class="tpf-name">Camille Martin</div>
+            <div class="tpf-title">Ingénieur logiciel web</div>
             ${sectionCV('Profil')}
             <div class="tpf-text tpf-text-italic">${loremShort}</div>
             ${sectionCV('Expérience')}
