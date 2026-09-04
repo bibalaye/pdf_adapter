@@ -137,6 +137,7 @@ const helpLinkGroq = $('#helpLinkGroq');
 const helpLinkGemini = $('#helpLinkGemini');
 const helpLinkMistral = $('#helpLinkMistral');
 const footerProvider = $('#footerProvider');
+const installBtn = $('#installBtn');
 
 // History
 const historyBtn = $('#historyBtn');
@@ -163,6 +164,56 @@ function init() {
   updateHistoryBadge();
   updateGenerationChoice();
   restoreSavedCV();
+  setupPWA();
+}
+
+function setupPWA() {
+  let installPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    installBtn.classList.remove('hidden');
+  });
+
+  installBtn.addEventListener('click', async () => {
+    if (!installPrompt) {
+      showToast('Sur iPhone, utilisez Partager puis « Sur l’écran d’accueil ».', 'info', 6000);
+      return;
+    }
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === 'accepted') showToast('AdaptaCV est installé.', 'success');
+    installPrompt = null;
+    installBtn.classList.add('hidden');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    installPrompt = null;
+    installBtn.classList.add('hidden');
+  });
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (isIOS && !isStandalone) installBtn.classList.remove('hidden');
+
+  if ('serviceWorker' in navigator && import.meta.env.PROD) {
+    window.addEventListener('load', async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+        registration.addEventListener('updatefound', () => {
+          const worker = registration.installing;
+          worker?.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('Une mise à jour sera appliquée au prochain démarrage.', 'info', 6000);
+            }
+          });
+        });
+      } catch (error) {
+        console.warn('PWA registration failed:', error);
+      }
+    });
+  }
 }
 
 function loadSettings() {

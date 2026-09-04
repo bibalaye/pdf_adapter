@@ -1,0 +1,44 @@
+{
+  "id": "/",
+  "name": "AdaptaCV",
+  "short_name": "AdaptaCV",
+  "description": "Adaptez fidèlement votre CV à chaque offre et générez une lettre de motivation optionnelle.",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F4F6F1",
+  "theme_color": "#2E6B4F",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle candidature",
+      "short_name": "Nouvelle",
+      "description": "Adapter le CV à une nouvelle offre",
+      "url": "/?action=new",
+      "icons": [{ "src": "/brand-mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

@@ -3,19 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f4f6f1" />
+  <meta name="theme-color" content="#2E6B4F" />
+  <meta name="color-scheme" content="light" />
+  <meta name="application-name" content="AdaptaCV" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="AdaptaCV" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>AdaptaCV | Une candidature juste</title>
   <meta name="description" content="Transformez une offre d'emploi en CV et lettre de motivation adaptés à votre profil." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL@20..48,300..600,0..1&display=swap" rel="stylesheet" />
-  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 </head>
 <body>
   <div id="app" class="app-shell">
     <header class="topbar">
       <a class="brand" href="#" aria-label="AdaptaCV, accueil">
-        <span class="brand-mark"><span class="material-symbols-rounded">article</span></span>
+        <span class="brand-mark"><img src="/brand-mark.svg" alt="" /></span>
         <span>Adapta<span>CV</span></span>
       </a>
 
@@ -24,6 +33,10 @@
           <span class="status-dot"></span>
           <span id="footerProvider">Groq</span>
         </div>
+        <button id="installBtn" class="icon-button text-button hidden" type="button" title="Installer AdaptaCV">
+          <span class="material-symbols-rounded">install_mobile</span>
+          <span class="button-label">Installer</span>
+        </button>
         <button id="historyBtn" class="icon-button text-button" type="button" title="Historique">
           <span class="material-symbols-rounded">history</span>
           <span class="button-label">Historique</span>

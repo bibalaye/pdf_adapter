@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "brand:icons": "node scripts/generate-brand-icons.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },

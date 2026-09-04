@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">AdaptaCV</title>
+  <rect width="64" height="64" rx="14" fill="#2E6B4F"/>
+  <path fill="#F7FAF7" d="M18 11h19l11 11v31H18z"/>
+  <path fill="#DCEADE" d="M37 11v12h11z"/>
+  <path fill="none" stroke="#2E6B4F" stroke-linecap="round" stroke-linejoin="round" stroke-width="5" d="m25 38 5 5 11-13"/>
+</svg>
