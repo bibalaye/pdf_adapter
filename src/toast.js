@@ -1,6 +1,9 @@
 /**
  * Toast notification system
  */
+import { icon } from './icon.js';
+
+const MAX_VISIBLE = 3;
 
 let toastContainer = null;
 
@@ -16,8 +19,9 @@ function getContainer() {
  * @param {string} message
  * @param {'success'|'error'|'info'} type
  * @param {number} duration - ms
+ * @param {{label: string, onClick: Function}} [action] - optional button, e.g. "Annuler"
  */
-export function showToast(message, type = 'info', duration = 4000) {
+export function showToast(message, type = 'info', duration = 4000, action = null) {
     const container = getContainer();
     if (!container) return;
 
@@ -29,15 +33,31 @@ export function showToast(message, type = 'info', duration = 4000) {
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-    <span class="material-symbols-rounded">${icons[type] || 'info'}</span>
-    <span>${message}</span>
-  `;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.innerHTML = icon(icons[type] || 'info');
 
-    container.appendChild(toast);
+    const text = document.createElement('span');
+    text.textContent = message;
+    toast.appendChild(text);
 
-    setTimeout(() => {
+    const dismiss = () => {
         toast.classList.add('toast-out');
         setTimeout(() => toast.remove(), 300);
-    }, duration);
+    };
+
+    if (action) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'toast-action';
+        button.textContent = action.label;
+        button.addEventListener('click', () => {
+            action.onClick();
+            dismiss();
+        });
+        toast.appendChild(button);
+    }
+
+    while (container.children.length >= MAX_VISIBLE) container.firstElementChild.remove();
+    container.appendChild(toast);
+    setTimeout(dismiss, duration);
 }

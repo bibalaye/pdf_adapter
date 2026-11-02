@@ -21,11 +21,12 @@ Le projet poursuit un principe simple : **adapter la présentation, jamais inven
 
 ### Parcours utilisateur
 
-1. Importer un CV au format PDF.
-2. Extraire son contenu localement, avec OCR si nécessaire.
+1. Importer un CV au format PDF, ou coller son texte.
+2. Extraire son contenu localement, avec OCR si nécessaire, et le corriger depuis **Mon CV**.
 3. Coller ou importer une offre d’emploi en PDF ou en image.
 4. Choisir un modèle de CV et, éventuellement, une lettre de motivation.
-5. Générer, prévisualiser et télécharger les documents LaTeX.
+5. Générer, relire, puis obtenir le PDF ou la source LaTeX.
+6. Retrouver chaque dossier dans **Candidatures**.
 
 ## Fonctionnalités
 
@@ -39,8 +40,10 @@ Le projet poursuit un principe simple : **adapter la présentation, jamais inven
 - Cinq modèles de CV différenciés : Clair, Moderne, Minimal, Exécutif et Créatif.
 - Aperçu des modèles avec données d’exemple.
 - Photo facultative conservée dans sa qualité originale.
-- Historique local des candidatures.
-- Génération de documents LaTeX et aperçu via TeXLive.net.
+- Historique local des candidatures, avec recherche, score d’adéquation et annulation de la suppression.
+- Mots-clés mis en avant et pistes d’amélioration affichés avec chaque dossier.
+- Une clé API distincte pour chaque fournisseur.
+- Génération de documents LaTeX et PDF via TeXLive.net.
 - PWA installable avec manifeste, icônes maskables et écran hors connexion.
 - Interface responsive pour ordinateur et mobile.
 
@@ -50,7 +53,8 @@ AdaptaCV ne possède pas de serveur applicatif dans son état actuel.
 
 - Le CV extrait, les réglages et l’historique sont mémorisés dans le navigateur avec `localStorage` ou `sessionStorage`.
 - Lors d’une génération, le texte du CV et de l’offre est envoyé au fournisseur IA sélectionné avec la clé API renseignée par l’utilisateur.
-- L’aperçu PDF LaTeX utilise le service externe TeXLive.net.
+- Le PDF est compilé par le service externe TeXLive.net, qui reçoit le contenu du document à chaque demande.
+- La police et les icônes sont servies par l’application : aucune requête vers Google Fonts.
 - Aucune garantie ne peut être donnée concernant la conservation ou le traitement des données par ces services tiers. Consultez leurs politiques avant utilisation.
 - Évitez d’utiliser des données sensibles si vous ne souhaitez pas les transmettre au fournisseur configuré.
 
@@ -97,7 +101,7 @@ Les fichiers générés se trouvent dans `dist/`.
 
 ## Configuration IA
 
-La configuration est effectuée directement dans l’application avec le bouton **Réglages IA**.
+La configuration est effectuée directement dans l’application avec le menu **Réglages**. Si aucune clé n’est enregistrée, elle est demandée au moment de lancer l’adaptation et la génération reprend dès l’enregistrement.
 
 | Fournisseur | Modèle actuel | Création de clé |
 | --- | --- | --- |
@@ -105,7 +109,7 @@ La configuration est effectuée directement dans l’application avec le bouton 
 | Google | Gemini 2.5 Flash | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | Mistral AI | Mistral Small | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
 
-La clé est enregistrée dans le stockage local du navigateur. Elle ne doit jamais être ajoutée au code, à Git ou à une capture d’écran publique.
+Chaque clé est enregistrée dans le stockage local du navigateur, séparément pour chaque fournisseur. Elle ne doit jamais être ajoutée au code, à Git ou à une capture d’écran publique.
 
 ## PWA
 
@@ -116,11 +120,14 @@ Le projet peut être installé comme application sur les navigateurs compatibles
 - Le shell de l’application et une page hors connexion sont mis en cache.
 - Une connexion reste nécessaire pour appeler les fournisseurs IA et compiler les aperçus distants.
 
-Les icônes de marque peuvent être régénérées avec :
+Les icônes de marque et le sprite d’icônes de l’interface peuvent être régénérés avec :
 
 ```bash
 npm run brand:icons
+npm run brand:sprite
 ```
+
+Pour utiliser une nouvelle icône d’interface, ajoutez son nom Material Symbols à la liste de `scripts/build-icon-sprite.mjs`, puis régénérez le sprite.
 
 ## Structure du projet
 
@@ -128,20 +135,23 @@ npm run brand:icons
 pdf_adapter/
 ├── index.html                  # Structure de l’application
 ├── src/
-│   ├── main.js                 # État, navigation et interactions
+│   ├── main.js                 # État, routes, navigation et interactions
 │   ├── ai-service.js           # Prompts et appels aux fournisseurs IA
 │   ├── pdf-parser.js           # Extraction PDF et OCR
 │   ├── pdf-generator.js        # Orchestration LaTeX
 │   ├── cv-templates.js         # Modèles de CV et lettre
 │   ├── style.css               # Système visuel et responsive
+│   ├── icon.js                 # Référence au sprite d’icônes
 │   └── toast.js                # Notifications
 ├── public/
 │   ├── manifest.webmanifest    # Manifeste PWA
 │   ├── service-worker.js       # Cache et mode hors connexion
 │   ├── offline.html            # Écran hors connexion
+│   ├── icons.svg               # Sprite d’icônes de l’interface
 │   └── icon-*.png              # Icônes installables
 ├── scripts/
-│   └── generate-brand-icons.mjs
+│   ├── generate-brand-icons.mjs
+│   └── build-icon-sprite.mjs
 └── BRAND_MASTER_PROMPT.md      # Brief complet de branding
 ```
 

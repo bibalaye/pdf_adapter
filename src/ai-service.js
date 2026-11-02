@@ -23,13 +23,36 @@ const PROVIDERS = {
     },
 };
 
+const LEGACY_API_KEY = 'cv_adapter_api_key';
+
+/**
+ * Each provider keeps its own key, so switching never sends one to the wrong service.
+ * Moves a key saved by an earlier version to the provider it was entered for.
+ */
+function migrateLegacyApiKey() {
+    const legacyKey = localStorage.getItem(LEGACY_API_KEY);
+    if (legacyKey === null) return;
+    const provider = localStorage.getItem('cv_adapter_provider') || 'groq';
+    if (legacyKey) localStorage.setItem(`${LEGACY_API_KEY}_${provider}`, legacyKey);
+    localStorage.removeItem(LEGACY_API_KEY);
+}
+
+/**
+ * Get the saved API key of a provider
+ */
+export function getApiKey(provider) {
+    migrateLegacyApiKey();
+    return localStorage.getItem(`${LEGACY_API_KEY}_${provider}`) || '';
+}
+
 /**
  * Get saved settings from localStorage
  */
 export function getSettings() {
+    const provider = localStorage.getItem('cv_adapter_provider') || 'groq';
     return {
-        provider: localStorage.getItem('cv_adapter_provider') || 'groq',
-        apiKey: localStorage.getItem('cv_adapter_api_key') || '',
+        provider,
+        apiKey: getApiKey(provider),
         language: localStorage.getItem('cv_adapter_language') || 'fr',
     };
 }
@@ -38,9 +61,18 @@ export function getSettings() {
  * Save settings to localStorage
  */
 export function saveSettings(provider, apiKey, language) {
+    migrateLegacyApiKey();
     localStorage.setItem('cv_adapter_provider', provider);
-    localStorage.setItem('cv_adapter_api_key', apiKey);
+    if (apiKey) localStorage.setItem(`${LEGACY_API_KEY}_${provider}`, apiKey);
+    else localStorage.removeItem(`${LEGACY_API_KEY}_${provider}`);
     localStorage.setItem('cv_adapter_language', language);
+}
+
+/**
+ * Get the short name of the current provider
+ */
+export function getProviderName() {
+    return PROVIDERS[getSettings().provider]?.name || 'Non configuré';
 }
 
 /**
@@ -365,6 +397,12 @@ async function callAI(provider, apiKey, systemPrompt, userMessage) {
     throw new Error('Format de provider non supporté');
 }
 
+function createAPIError(provider, message, status) {
+    const error = new Error(`Erreur API ${provider.name}: ${message}`);
+    error.status = status;
+    return error;
+}
+
 /**
  * Call OpenAI-compatible API (Groq, Mistral)
  */
@@ -389,7 +427,7 @@ async function callOpenAIFormat(provider, apiKey, systemPrompt, userMessage) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData?.error?.message || response.statusText;
-        throw new Error(`Erreur API ${provider.name}: ${errorMsg}`);
+        throw createAPIError(provider, errorMsg, response.status);
     }
 
     const data = await response.json();
@@ -427,7 +465,7 @@ async function callGeminiFormat(provider, apiKey, systemPrompt, userMessage) {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMsg = errorData?.error?.message || response.statusText;
-        throw new Error(`Erreur API ${provider.name}: ${errorMsg}`);
+        throw createAPIError(provider, errorMsg, response.status);
     }
 
     const data = await response.json();
