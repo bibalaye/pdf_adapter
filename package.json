@@ -8,7 +8,8 @@
     "brand:icons": "node scripts/generate-brand-icons.mjs",
     "brand:sprite": "node scripts/build-icon-sprite.mjs",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test \"tests/*.test.mjs\""
   },
   "devDependencies": {
     "vite": "^7.3.1"

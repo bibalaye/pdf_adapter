@@ -34,7 +34,10 @@ Le projet poursuit un principe simple : **adapter la présentation, jamais inven
 - OCR français et anglais avec Tesseract.js.
 - Import des offres par texte, PDF, JPG, PNG ou WebP.
 - Profil source mémorisé dans le stockage local du navigateur.
-- Adaptation du CV avec Groq, Google Gemini ou Mistral AI.
+- Adaptation du CV avec Groq, Google Gemini, Mistral AI, OpenRouter, ou votre propre modèle compatible OpenAI.
+- Panel de recrutement : sept relecteurs simulés essaient de rejeter le CV, puis il est reconstruit.
+- Contrôle de fidélité sans IA : ce qui n'apparaît pas dans le CV source est retiré et signalé.
+- Questions posées au candidat pour les faits manquants, intégrées au CV source.
 - Prompts conçus pour limiter les inventions et préserver les informations factuelles.
 - Lettre de motivation courte et optionnelle.
 - Cinq modèles de CV différenciés : Clair, Moderne, Minimal, Exécutif et Créatif.
@@ -67,7 +70,7 @@ AdaptaCV ne possède pas de serveur applicatif dans son état actuel.
 | PDF | pdfjs-dist, pdf-lib |
 | OCR | Tesseract.js |
 | Téléchargement | file-saver |
-| IA | Groq, Gemini, Mistral |
+| IA | Groq, Gemini, Mistral, OpenRouter, services compatibles OpenAI |
 | Documents | LaTeX, TeXLive.net |
 | PWA | Web App Manifest, Service Worker |
 
@@ -103,11 +106,20 @@ Les fichiers générés se trouvent dans `dist/`.
 
 La configuration est effectuée directement dans l’application avec le menu **Réglages**. Si aucune clé n’est enregistrée, elle est demandée au moment de lancer l’adaptation et la génération reprend dès l’enregistrement.
 
-| Fournisseur | Modèle actuel | Création de clé |
+| Fournisseur | Modèle recommandé | Création de clé |
 | --- | --- | --- |
-| Groq | Llama 3.3 70B Versatile | [console.groq.com/keys](https://console.groq.com/keys) |
-| Google | Gemini 2.5 Flash | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| Mistral AI | Mistral Small | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
+| Groq | `openai/gpt-oss-120b` | [console.groq.com/keys](https://console.groq.com/keys) |
+| Google | `gemini-3.8-flash` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| Mistral AI | `mistral-small-2603` | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys) |
+| OpenRouter | `nvidia/nemotron-3.5-super-vl:free` | [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys) |
+
+Catalogue vérifié le 2 novembre 2026 sur la documentation de chaque fournisseur. Il vieillit vite : le bouton d'actualisation des réglages interroge le fournisseur, et l'application passe au modèle suivant si l'un d'eux est retiré. Mettez à jour `PROVIDERS` dans `src/ai-service.js` à chaque changement.
+
+Les offres gratuites peuvent utiliser les données envoyées, selon le fournisseur. Les réglages l'indiquent pour chacun d'eux.
+
+### Ajouter son propre modèle
+
+**Réglages**, puis **Ajouter mon propre modèle** accepte tout service compatible avec l'API OpenAI : Ollama, LM Studio, vLLM ou un autre fournisseur. L'adresse doit être en https, sauf sur une adresse locale. Un serveur local doit autoriser les appels depuis le site (par exemple `OLLAMA_ORIGINS` pour Ollama).
 
 Chaque clé est enregistrée dans le stockage local du navigateur, séparément pour chaque fournisseur. Elle ne doit jamais être ajoutée au code, à Git ou à une capture d’écran publique.
 
@@ -136,7 +148,10 @@ pdf_adapter/
 ├── index.html                  # Structure de l’application
 ├── src/
 │   ├── main.js                 # État, routes, navigation et interactions
-│   ├── ai-service.js           # Prompts et appels aux fournisseurs IA
+│   ├── ai-service.js           # Catalogue de modèles, appels et reprises
+│   ├── prompts.js              # Prompts système
+│   ├── hiring-panel.js         # Panel de recrutement et reconstruction
+│   ├── fidelity.js             # Contrôle de fidélité, sans IA
 │   ├── pdf-parser.js           # Extraction PDF et OCR
 │   ├── pdf-generator.js        # Orchestration LaTeX
 │   ├── cv-templates.js         # Modèles de CV et lettre
@@ -157,7 +172,9 @@ pdf_adapter/
 
 ## Principes de génération
 
-Les contributions aux prompts doivent préserver les règles suivantes :
+Une génération enchaîne l'adaptation, le panel, la reconstruction, un second passage du filtre et la lettre. Le panel express tient en une requête pour respecter les quotas gratuits. L'option **Relecteurs isolés** envoie une requête par relecteur. Le contrôle de fidélité (`src/fidelity.js`) s'applique ensuite à tout CV, avec ou sans panel. La méthode du panel vient de `/hiring-panel`, par Alex Chen (@nocodealex, chen.media).
+
+Les contributions aux prompts (`src/prompts.js`) doivent préserver les règles suivantes :
 
 - Ne jamais inventer une expérience, formation, certification ou compétence.
 - Ne jamais calculer une ancienneté absente du CV.
@@ -189,6 +206,7 @@ Les contributions sont les bienvenues, notamment sur :
 
 ```bash
 npm install
+npm test
 npm run build
 ```
 
@@ -211,6 +229,8 @@ Ne publiez jamais une clé API, un CV réel ou des coordonnées personnelles dan
 - La compilation d’aperçu dépend de TeXLive.net et d’une connexion réseau.
 - L’OCR peut perdre la structure des documents complexes ou fortement illustrés.
 - La qualité de la sortie IA dépend du fournisseur, du modèle et de l’offre fournie.
+- Le panel simule des relecteurs : il ne prédit ni un vrai filtre ATS, ni une décision d'embauche.
+- Le contrôle de fidélité vérifie les chiffres, compétences, coordonnées et niveaux de séniorité. Il ne détecte pas une responsabilité exagérée sans chiffre : relisez toujours.
 - Les documents générés doivent toujours être relus avant envoi.
 - Le bundle client est relativement volumineux à cause des bibliothèques PDF et OCR.
 

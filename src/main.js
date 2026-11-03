@@ -8,12 +8,30 @@ import { extractTextFromPDF, extractTextFromImage, renderPDFPagesToImages } from
 import {
   getSettings,
   getApiKey,
+  getSelectedModel,
+  getProviderChoices,
+  getProviderInfo,
+  getCustomModel,
+  getLiveModels,
   saveSettings,
+  saveCustomModel,
+  deleteCustomModel,
+  normalizeEndpoint,
+  isAIReady,
+  isCustomProviderId,
+  getOpenRouterAllowsCollection,
+  setOpenRouterAllowsCollection,
+  fetchAvailableModels,
+  testConnection,
   getProviderName,
   getProviderDisplayName,
+  getLastModelUsed,
+  onAIStatus,
   adaptCV,
   generateCoverLetter,
 } from './ai-service.js';
+import { runHiringPanel } from './hiring-panel.js';
+import { enforceFidelity, findUnattestedNumbers, keywordCoverage, cvToText } from './fidelity.js';
 import {
   generateAdaptedCVPDF,
   generateCoverLetterPDF,
@@ -30,6 +48,11 @@ const SAVED_CV_KEY = 'adaptacv_source_profile';
 const PHOTO_KEY = 'adaptacv_profile_photo';
 const TEMPLATE_KEY = 'adaptacv_cv_template';
 const OFFER_DRAFT_KEY = 'adaptacv_offer_draft';
+const PANEL_KEY = 'adaptacv_panel_enabled';
+const PANEL_ISOLATED_KEY = 'adaptacv_panel_isolated';
+const OTHER_MODEL = '__other__';
+const LOADING_HINT = 'Gardez cet onglet ouvert.';
+const VERDICT_LABELS = { yes: 'Retenu', maybe: 'À revoir', no: 'Écarté' };
 const MIN_OFFER_LENGTH = 20;
 const MIN_CV_LENGTH = 50;
 const FULL_OFFER_LENGTH = 200;
@@ -40,12 +63,6 @@ const TEMPLATES = {
   minimal: { name: 'Minimal', description: 'En-tête centré, sans couleur, tout pour le texte.' },
   executive: { name: 'Exécutif', description: 'Bandeau sombre, pour les postes à responsabilités.' },
   bold: { name: 'Créatif', description: 'Compétences en tête et accent terracotta.' },
-};
-
-const PROVIDER_LINKS = {
-  groq: { label: 'Créer une clé Groq', url: 'https://console.groq.com/keys' },
-  gemini: { label: 'Créer une clé Gemini', url: 'https://aistudio.google.com/apikey' },
-  mistral: { label: 'Créer une clé Mistral', url: 'https://console.mistral.ai/api-keys' },
 };
 
 const ROUTES = {
@@ -69,6 +86,10 @@ const state = {
   currentStep: 1,
   adaptedCV: null,
   coverLetter: null,
+  panel: null,
+  fidelity: null,
+  coverage: null,
+  modelUsed: null,
   profilePhotoDataURL: null,
   cvTemplate: TEMPLATES[storedTemplate] ? storedTemplate : 'classic',
   letterTemplate: 'formal',
@@ -143,6 +164,7 @@ const actionBar = $('.action-bar');
 const savedCVName = $('#savedCVName');
 const savedCVMeta = $('#savedCVMeta');
 const includeCoverLetterInput = $('#includeCoverLetter');
+const includePanelInput = $('#includePanel');
 const languageInputs = $$('input[name="docLanguage"]');
 const checkCV = $('#checkCV');
 const checkOffer = $('#checkOffer');
@@ -168,6 +190,9 @@ const loadingProgressBar = $('#loadingProgressBar');
 const loadingStep1 = $('#loadingStep1');
 const loadingStep2 = $('#loadingStep2');
 const loadingStep3 = $('#loadingStep3');
+const loadingStepPanel = $('#loadingStepPanel');
+const loadingStepFix = $('#loadingStepFix');
+const loadingSubtitle = $('#loadingSubtitle');
 const successMark = $('#successMark');
 const resultTitle = $('#resultTitle');
 const resultSubtitle = $('#resultSubtitle');
@@ -187,6 +212,23 @@ const keywordsCard = $('#keywordsCard');
 const keywordsList = $('#keywordsList');
 const tipsCard = $('#tipsCard');
 const tipsList = $('#tipsList');
+const coverageLine = $('#coverageLine');
+const panelCard = $('#panelCard');
+const panelFailed = $('#panelFailed');
+const panelBody = $('#panelBody');
+const screenBefore = $('#screenBefore');
+const screenArrow = $('#screenArrow');
+const screenAfter = $('#screenAfter');
+const panelReviews = $('#panelReviews');
+const panelMistakesBox = $('#panelMistakesBox');
+const panelMistakesTitle = $('#panelMistakesTitle');
+const panelMistakes = $('#panelMistakes');
+const questionsCard = $('#questionsCard');
+const questionsList = $('#questionsList');
+const fidelityCard = $('#fidelityCard');
+const fidelitySummary = $('#fidelitySummary');
+const fidelityList = $('#fidelityList');
+const resultModel = $('#resultModel');
 
 // PDF preview
 const latexDialog = $('#latexDialog');
@@ -202,9 +244,36 @@ const settingsBtn = $('#settingsBtn');
 const settingsDialog = $('#settingsDialog');
 const settingsContext = $('#settingsContext');
 const settingsContextText = $('#settingsContextText');
-const providerInputs = $$('input[name="aiProvider"]');
+const providerGrid = $('#providerGrid');
+const addCustomModelBtn = $('#addCustomModelBtn');
+const customModelForm = $('#customModelForm');
+const customFormTitle = $('#customFormTitle');
+const customName = $('#customName');
+const customUrl = $('#customUrl');
+const customModelId = $('#customModelId');
+const customKey = $('#customKey');
+const customFormError = $('#customFormError');
+const customSaveBtn = $('#customSaveBtn');
+const customCancelBtn = $('#customCancelBtn');
+const customModelInfo = $('#customModelInfo');
+const customInfoModel = $('#customInfoModel');
+const customInfoUrl = $('#customInfoUrl');
+const customEditBtn = $('#customEditBtn');
+const customDeleteBtn = $('#customDeleteBtn');
+const modelField = $('#modelField');
+const modelSelect = $('#modelSelect');
+const modelCustomId = $('#modelCustomId');
+const modelHint = $('#modelHint');
+const refreshModelsBtn = $('#refreshModelsBtn');
+const apiKeyLabel = $('#apiKeyLabel');
 const apiKeyInput = $('#apiKey');
 const apiKeyError = $('#apiKeyError');
+const testConnectionBtn = $('#testConnectionBtn');
+const testConnectionResult = $('#testConnectionResult');
+const providerDataText = $('#providerDataText');
+const openrouterCollectionRow = $('#openrouterCollectionRow');
+const openrouterAllowCollection = $('#openrouterAllowCollection');
+const panelIsolatedInput = $('#panelIsolated');
 const apiKeyLink = $('#apiKeyLink');
 const apiKeyLinkLabel = $('#apiKeyLinkLabel');
 const toggleApiKeyBtn = $('#toggleApiKey');
@@ -252,6 +321,8 @@ function init() {
   restoreProfilePhoto();
   restoreSavedCV();
   restoreOfferDraft();
+  includePanelInput.checked = localStorage.getItem(PANEL_KEY) !== 'false';
+  onAIStatus(handleAIStatus);
   syncTemplateUI();
   updateHistoryBadge();
   updateGenerationChoice();
@@ -311,11 +382,20 @@ function setupPWA() {
 
 function loadSettings() {
   const settings = getSettings();
-  providerInputs.forEach((input) => { input.checked = input.value === settings.provider; });
   languageInputs.forEach((input) => { input.checked = input.value === settings.language; });
-  apiKeyInput.value = settings.apiKey;
-  updateProviderHelp(settings.provider);
-  updateProviderKeys();
+  panelIsolatedInput.checked = localStorage.getItem(PANEL_ISOLATED_KEY) === 'true';
+  openrouterAllowCollection.checked = getOpenRouterAllowsCollection();
+  renderProviderOptions(settings.provider);
+}
+
+function handleAIStatus(status) {
+  if (status.type === 'waiting') {
+    loadingSubtitle.textContent = `Limite gratuite de ${status.provider} atteinte : reprise dans ${status.seconds} s.`;
+  } else if (status.type === 'resumed') {
+    loadingSubtitle.textContent = LOADING_HINT;
+  } else if (status.type === 'model-fallback') {
+    showToast(`${status.from} est indisponible : ${status.to} prend le relais.`, 'info', 6000);
+  }
 }
 
 // ============================================================
@@ -406,7 +486,7 @@ function syncGenerationView() {
 
 function refreshStatus() {
   const cvReady = hasCV();
-  const keyReady = Boolean(getSettings().apiKey);
+  const keyReady = isAIReady();
 
   setupItemCV.classList.toggle('done', cvReady);
   setupItemAI.classList.toggle('done', keyReady);
@@ -528,9 +608,12 @@ function setupEventListeners() {
   companyNameInput.addEventListener('input', saveOfferDraft);
 
   includeCoverLetterInput.addEventListener('change', updateGenerationChoice);
+  includePanelInput.addEventListener('change', () => {
+    localStorage.setItem(PANEL_KEY, String(includePanelInput.checked));
+  });
   languageInputs.forEach((input) => input.addEventListener('change', () => {
     const settings = getSettings();
-    saveSettings(settings.provider, settings.apiKey, input.value);
+    saveSettings(settings.provider, settings.apiKey, input.value, settings.model);
   }));
 
   jobFileInput.addEventListener('change', (event) => {
@@ -591,6 +674,7 @@ function setupEventListeners() {
     else handleDownloadCV();
   });
   docCopyBtn.addEventListener('click', handleCopyLetter);
+  questionsCard.addEventListener('submit', handleQuestionsSubmit);
 
   // --- PDF preview ---
   latexOpenTabBtn.addEventListener('click', () => {
@@ -613,11 +697,20 @@ function setupEventListeners() {
     state.pendingGenerate = false;
   });
 
-  providerInputs.forEach((input) => input.addEventListener('change', () => {
-    apiKeyInput.value = getApiKey(input.value);
-    apiKeyError.classList.add('hidden');
-    updateProviderHelp(input.value);
-  }));
+  providerGrid.addEventListener('change', () => syncProviderFields(getFormProvider()));
+  modelSelect.addEventListener('change', () => {
+    const other = modelSelect.value === OTHER_MODEL;
+    modelCustomId.classList.toggle('hidden', !other);
+    if (other) modelCustomId.focus();
+    testConnectionResult.textContent = '';
+  });
+  refreshModelsBtn.addEventListener('click', () => refreshModels(getFormProvider()));
+  testConnectionBtn.addEventListener('click', handleTestConnection);
+  addCustomModelBtn.addEventListener('click', () => openCustomForm());
+  customEditBtn.addEventListener('click', () => openCustomForm(getCustomModel(getFormProvider())));
+  customCancelBtn.addEventListener('click', closeCustomForm);
+  customSaveBtn.addEventListener('click', handleCustomSave);
+  customDeleteBtn.addEventListener('click', handleCustomDelete);
 
   toggleApiKeyBtn.addEventListener('click', () => {
     const reveal = apiKeyInput.type === 'password';
@@ -630,13 +723,16 @@ function setupEventListeners() {
 
   saveSettingsBtn.addEventListener('click', () => {
     const apiKey = apiKeyInput.value.trim();
+    const provider = getFormProvider();
     const resume = state.pendingGenerate;
-    if (resume && !apiKey) {
+    if (resume && !apiKey && !isCustomProviderId(provider)) {
       apiKeyError.classList.remove('hidden');
       apiKeyInput.focus();
       return;
     }
-    saveSettings($('input[name="aiProvider"]:checked').value, apiKey, getSettings().language);
+    saveSettings(provider, apiKey, getSettings().language, getFormModel());
+    localStorage.setItem(PANEL_ISOLATED_KEY, String(panelIsolatedInput.checked));
+    setOpenRouterAllowsCollection(openrouterAllowCollection.checked);
     settingsDialog.close();
     refreshStatus();
     if (resume) {
@@ -718,6 +814,7 @@ function confirmAction({ title, body, confirmLabel }) {
 // ============================================================
 function openSettings() {
   loadSettings();
+  closeCustomForm();
   apiKeyError.classList.add('hidden');
   settingsContext.classList.toggle('hidden', !state.pendingGenerate);
   settingsContextText.textContent = apiKeyInput.value
@@ -728,17 +825,181 @@ function openSettings() {
   settingsDialog.showModal();
 }
 
-function updateProviderHelp(provider) {
-  const link = PROVIDER_LINKS[provider] || PROVIDER_LINKS.groq;
-  apiKeyLink.href = link.url;
-  apiKeyLinkLabel.textContent = link.label;
+function getFormProvider() {
+  return $('input[name="aiProvider"]:checked')?.value || getSettings().provider;
 }
 
-function updateProviderKeys() {
-  providerInputs.forEach((input) => {
-    const badge = input.closest('.provider-option').querySelector('.provider-key');
-    badge.classList.toggle('hidden', !getApiKey(input.value));
+function getFormModel() {
+  return modelSelect.value === OTHER_MODEL ? modelCustomId.value.trim() : modelSelect.value;
+}
+
+function renderProviderOptions(selected) {
+  providerGrid.innerHTML = getProviderChoices().map((choice) => `
+    <label class="provider-option">
+      <input type="radio" name="aiProvider" value="${esc(choice.id)}" ${choice.id === selected ? 'checked' : ''} />
+      <span>
+        <strong>${esc(choice.name)}</strong>
+        <small>${esc(choice.tagline)}</small>
+        ${choice.hasKey ? '<i class="provider-key">Clé enregistrée</i>' : ''}
+      </span>
+    </label>`).join('');
+  syncProviderFields(selected);
+}
+
+function syncProviderFields(providerId) {
+  const custom = isCustomProviderId(providerId);
+  modelField.classList.toggle('hidden', custom);
+  customModelInfo.classList.toggle('hidden', !custom);
+  apiKeyLink.classList.toggle('hidden', custom);
+  openrouterCollectionRow.classList.toggle('hidden', providerId !== 'openrouter');
+  apiKeyLabel.textContent = custom ? 'Clé API (optionnelle)' : 'Clé API';
+  apiKeyInput.value = getApiKey(providerId);
+  apiKeyError.classList.add('hidden');
+  testConnectionResult.textContent = '';
+  modelHint.classList.add('hidden');
+
+  if (custom) {
+    const record = getCustomModel(providerId);
+    customInfoModel.textContent = record?.model || '';
+    customInfoUrl.textContent = record?.baseUrl || '';
+    providerDataText.textContent = `Votre CV et votre clé sont envoyés à ${record ? new URL(record.baseUrl).host : 'ce service'}. Vérifiez que vous lui faites confiance.`;
+    return;
+  }
+
+  const info = getProviderInfo(providerId);
+  apiKeyLink.href = info.keyUrl;
+  apiKeyLinkLabel.textContent = info.keyLabel;
+  providerDataText.textContent = info.dataNote;
+  renderModelOptions(providerId, getSelectedModel(providerId));
+  if (info.modelsArePublic && getLiveModels(providerId).length === 0) refreshModels(providerId, { silent: true });
+}
+
+function renderModelOptions(providerId, selected) {
+  const info = getProviderInfo(providerId);
+  const catalogIds = info.models.map((model) => model.id);
+  const liveIds = getLiveModels(providerId).filter((id) => !catalogIds.includes(id));
+
+  modelSelect.innerHTML = '';
+  const catalog = document.createElement('optgroup');
+  catalog.label = 'Sélection AdaptaCV';
+  info.models.forEach((model) => {
+    catalog.appendChild(new Option(model.hint ? `${model.label} (${model.hint})` : model.label, model.id));
   });
+  modelSelect.appendChild(catalog);
+  if (liveIds.length) {
+    const live = document.createElement('optgroup');
+    live.label = providerId === 'openrouter' ? 'Autres modèles gratuits' : 'Disponibles sur votre compte';
+    liveIds.forEach((id) => live.appendChild(new Option(id, id)));
+    modelSelect.appendChild(live);
+  }
+  modelSelect.appendChild(new Option('Autre identifiant…', OTHER_MODEL));
+
+  const isOther = Boolean(selected) && !catalogIds.includes(selected) && !liveIds.includes(selected);
+  modelSelect.value = isOther ? OTHER_MODEL : selected;
+  modelCustomId.classList.toggle('hidden', !isOther);
+  modelCustomId.value = isOther ? selected : '';
+}
+
+function showModelHint(text) {
+  modelHint.textContent = text;
+  modelHint.classList.remove('hidden');
+}
+
+async function refreshModels(providerId, { silent = false } = {}) {
+  const info = getProviderInfo(providerId);
+  if (!info) return;
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey && !info.modelsArePublic) {
+    if (!silent) showModelHint('Ajoutez d’abord votre clé pour lister les modèles de votre compte.');
+    return;
+  }
+  if (!silent) showModelHint('Recherche des modèles...');
+  try {
+    const selected = getFormModel();
+    const models = await fetchAvailableModels(providerId, apiKey);
+    if (getFormProvider() !== providerId) return;
+    renderModelOptions(providerId, selected);
+    if (!silent) showModelHint(`${formatCount(models.length, 'modèle')} trouvé${models.length > 1 ? 's' : ''}.`);
+  } catch (error) {
+    console.warn('Model list unavailable', error);
+    if (!silent) showModelHint('Liste indisponible. Vérifiez la clé, ou saisissez l’identifiant du modèle.');
+  }
+}
+
+async function handleTestConnection() {
+  const provider = getFormProvider();
+  const apiKey = apiKeyInput.value.trim();
+  if (!apiKey && !isCustomProviderId(provider)) {
+    apiKeyError.classList.remove('hidden');
+    apiKeyInput.focus();
+    return;
+  }
+  testConnectionBtn.disabled = true;
+  testConnectionResult.textContent = 'Test en cours...';
+  try {
+    const model = isCustomProviderId(provider) ? getCustomModel(provider)?.model : getFormModel();
+    const { elapsedMs } = await testConnection({ provider, model, apiKey });
+    testConnectionResult.textContent = `Connexion réussie en ${elapsedMs.toLocaleString('fr-FR')} ms.`;
+  } catch (error) {
+    console.warn('Connection test failed', error);
+    testConnectionResult.textContent = describeGenerationError(error).title;
+  } finally {
+    testConnectionBtn.disabled = false;
+  }
+}
+
+let editingCustomId = null;
+
+function openCustomForm(record = null) {
+  editingCustomId = record?.id || null;
+  customFormTitle.textContent = record ? 'Modifier ce modèle' : 'Ajouter un modèle';
+  customName.value = record?.name || '';
+  customUrl.value = record?.baseUrl || '';
+  customModelId.value = record?.model || '';
+  customKey.value = record?.apiKey || '';
+  customFormError.classList.add('hidden');
+  customModelForm.classList.remove('hidden');
+  saveSettingsBtn.disabled = true;
+  customName.focus();
+}
+
+function closeCustomForm() {
+  editingCustomId = null;
+  customModelForm.classList.add('hidden');
+  saveSettingsBtn.disabled = false;
+}
+
+function handleCustomSave() {
+  const name = customName.value.trim();
+  const model = customModelId.value.trim();
+  const { url, error } = normalizeEndpoint(customUrl.value);
+  const problem = !name ? 'Donnez un nom à ce modèle.'
+    : error ? error
+    : !model ? 'Indiquez l’identifiant du modèle.'
+    : '';
+  if (problem) {
+    customFormError.textContent = problem;
+    customFormError.classList.remove('hidden');
+    return;
+  }
+  const saved = saveCustomModel({ id: editingCustomId, name, baseUrl: url, model, apiKey: customKey.value.trim() });
+  closeCustomForm();
+  renderProviderOptions(saved.providerId);
+}
+
+async function handleCustomDelete() {
+  const provider = getFormProvider();
+  const record = getCustomModel(provider);
+  const confirmed = await confirmAction({
+    title: `Supprimer « ${record?.name || 'ce modèle'} » ?`,
+    body: 'Son adresse et sa clé seront retirées de ce navigateur.',
+    confirmLabel: 'Supprimer',
+  });
+  if (!confirmed) return;
+  deleteCustomModel(provider);
+  closeCustomForm();
+  renderProviderOptions(getSettings().provider);
+  refreshStatus();
 }
 
 // ============================================================
@@ -1010,6 +1271,9 @@ function startNewApplication() {
 function resetOffer() {
   state.adaptedCV = null;
   state.coverLetter = null;
+  state.panel = null;
+  state.fidelity = null;
+  state.coverage = null;
   jobTitleInput.value = '';
   companyNameInput.value = '';
   jobDescriptionInput.value = '';
@@ -1052,7 +1316,7 @@ function updateGenerateButton() {
   const rawLength = jobDescriptionInput.value.length;
   const length = jobDescriptionInput.value.trim().length;
   const offerReady = length > MIN_OFFER_LENGTH;
-  const keyReady = Boolean(getSettings().apiKey);
+  const keyReady = isAIReady();
 
   generateBtn.disabled = !offerReady || !hasCV();
   jobDescCount.textContent = formatCount(rawLength, 'caractère');
@@ -1123,13 +1387,29 @@ function describeGenerationError(err) {
   if (status === 401 || status === 403 || /api key/i.test(message)) {
     return { title: `${provider} a refusé la clé API`, detail: 'Vérifiez qu’elle est complète et toujours active.', keyIssue: true };
   }
+  if (status === 404 || status === 410) {
+    const collectionBlocked = /data policy|no endpoints/i.test(message);
+    return {
+      title: collectionBlocked ? 'Aucun hébergeur sans collecte de données pour ce modèle' : 'Modèle indisponible',
+      detail: collectionBlocked
+        ? 'Choisissez un autre modèle ou fournisseur, ou autorisez ces hébergeurs dans les réglages.'
+        : 'Ce modèle n’est plus proposé. Choisissez-en un autre dans les réglages.',
+      keyIssue: true,
+    };
+  }
+  if (status === 413) {
+    return { title: 'CV et offre trop longs pour ce modèle gratuit', detail: 'Raccourcissez l’offre, ou choisissez un autre modèle dans les réglages.', keyIssue: true };
+  }
   if (status === 429) {
-    return { title: `Limite de ${provider} atteinte`, detail: 'Patientez une minute avant de réessayer, ou changez de fournisseur dans les réglages.' };
+    return { title: `Limite gratuite de ${provider} atteinte`, detail: 'Les étapes déjà faites sont conservées. Réessayez plus tard, ou changez de modèle dans les réglages.', keyIssue: true };
   }
   if (status >= 500) {
     return { title: `${provider} est momentanément indisponible`, detail: 'Votre offre est conservée. Réessayez dans quelques instants.' };
   }
   if (err instanceof TypeError) {
+    if (isCustomProviderId(getSettings().provider)) {
+      return { title: `Connexion impossible à ${provider}`, detail: 'Vérifiez l’adresse, et que ce service autorise les appels depuis ce site (CORS).', keyIssue: true };
+    }
     return { title: 'Connexion impossible', detail: 'Vérifiez votre connexion internet, puis réessayez.' };
   }
   return { title: 'La génération n’a pas abouti', detail: message || 'Réessayez dans quelques instants.' };
@@ -1140,6 +1420,7 @@ function showGenerationError(err) {
   generationErrorTitle.textContent = title;
   generationErrorDetail.textContent = detail;
   generationErrorSettings.classList.toggle('hidden', !keyIssue);
+  generationErrorSettings.textContent = title.includes('clé API') ? 'Vérifier la clé' : 'Ouvrir les réglages';
   generationError.classList.remove('hidden');
 }
 
@@ -1155,7 +1436,7 @@ async function handleGenerate() {
   hideGenerationError();
 
   const settings = getSettings();
-  if (!settings.apiKey) {
+  if (!isAIReady(settings)) {
     state.pendingGenerate = true;
     openSettings();
     return;
@@ -1171,18 +1452,31 @@ async function handleGenerate() {
   const companyName = companyNameInput.value.trim();
   const jobDescription = jobDescriptionInput.value.trim();
   const withLetter = includeCoverLetterInput.checked;
+  const withPanel = includePanelInput.checked;
+  const { language } = settings;
 
   state.generating = true;
   goToStep(3);
 
-  [loadingStep1, loadingStep2, loadingStep3].forEach((el) => el.classList.remove('active', 'done'));
+  const steps = [loadingStep1, loadingStep2, loadingStepPanel, loadingStepFix, loadingStep3];
+  steps.forEach((el) => el.classList.remove('active', 'done'));
+  loadingStepPanel.classList.toggle('hidden', !withPanel);
+  loadingStepFix.classList.toggle('hidden', !withPanel);
   loadingStep3.classList.toggle('hidden', !withLetter);
-  setProgress(5);
+  loadingSubtitle.textContent = LOADING_HINT;
+
+  const startStep = (el, title, progress) => {
+    el.classList.add('active');
+    loadingTitle.textContent = title;
+    setProgress(progress);
+  };
+  const finishStep = (el) => {
+    el.classList.remove('active');
+    el.classList.add('done');
+  };
 
   try {
-    loadingStep1.classList.add('active');
-    loadingTitle.textContent = 'Analyse du CV et de l’offre...';
-    setProgress(15);
+    startStep(loadingStep1, 'Analyse du CV et de l’offre...', 10);
 
     const cvResult = await adaptCV(
       state.extractedText,
@@ -1191,42 +1485,79 @@ async function handleGenerate() {
       companyName,
       (progress) => {
         if (progress === 'adapt-start') {
-          loadingStep1.classList.remove('active');
-          loadingStep1.classList.add('done');
-          loadingStep2.classList.add('active');
-          loadingTitle.textContent = 'Adaptation du CV en cours...';
-          setProgress(40);
+          finishStep(loadingStep1);
+          startStep(loadingStep2, 'Adaptation du CV en cours...', 25);
         }
-        if (progress === 'adapt-done') {
-          loadingStep2.classList.remove('active');
-          loadingStep2.classList.add('done');
-          setProgress(withLetter ? 65 : 100);
-        }
+        if (progress === 'adapt-done') finishStep(loadingStep2);
       }
     );
 
+    let draftCV = cvResult;
+    let panel = null;
+    if (withPanel) {
+      try {
+        const result = await runHiringPanel({
+          cvText: state.extractedText,
+          adaptedCV: cvResult,
+          jobDescription,
+          jobTitle,
+          companyName,
+          language,
+          isolated: localStorage.getItem(PANEL_ISOLATED_KEY) === 'true',
+          onProgress: (progress) => {
+            if (progress === 'review-start') startStep(loadingStepPanel, 'Les relecteurs examinent votre CV...', 45);
+            if (progress === 'review-done') finishStep(loadingStepPanel);
+            if (progress === 'rebuild-start') startStep(loadingStepFix, 'Correction des erreurs relevées...', 65);
+            if (progress === 'rebuild-done') finishStep(loadingStepFix);
+          },
+        });
+        draftCV = result.cv;
+        panel = result.panel;
+      } catch (panelError) {
+        // The adapted CV stays usable: the panel is an improvement, not a requirement
+        console.warn('Hiring panel failed', panelError);
+        steps.forEach((el) => el.classList.remove('active'));
+        panel = { failed: true, reason: describeGenerationError(panelError).title };
+      }
+    }
+
+    const fidelity = enforceFidelity(draftCV, state.extractedText, { language });
+
     let letterResult = null;
     if (withLetter) {
-      loadingStep3.classList.add('active');
-      loadingTitle.textContent = 'Rédaction de la lettre de motivation...';
-      setProgress(75);
+      startStep(loadingStep3, 'Rédaction de la lettre de motivation...', 85);
       letterResult = await generateCoverLetter(
         state.extractedText,
         jobDescription,
         jobTitle,
         companyName,
         (progress) => {
-          if (progress === 'letter-done') {
-            loadingStep3.classList.remove('active');
-            loadingStep3.classList.add('done');
-            setProgress(100);
-          }
+          if (progress === 'letter-done') finishStep(loadingStep3);
         }
       );
+      const unattested = findUnattestedNumbers(
+        [letterResult.opening, letterResult.body, letterResult.closing].join(' '),
+        state.extractedText,
+        jobDescription,
+      );
+      if (unattested.length) fidelity.warnings.push(`Lettre, chiffres à vérifier : ${unattested.join(', ')}`);
     }
+    setProgress(100);
 
-    state.adaptedCV = cvResult;
+    const keywords = cvResult.offerAnalysis?.keywords || [];
+    const coverage = keywords.length
+      ? { before: keywordCoverage(state.extractedText, keywords), after: keywordCoverage(cvToText(fidelity.cv), keywords) }
+      : null;
+    // Wording taken from the offer without support in the source: a person must confirm it
+    const borrowed = (coverage?.after.found || []).filter((term) => !coverage.before.found.includes(term));
+    if (borrowed.length) fidelity.warnings.push(`Termes de l’offre absents de votre CV, à confirmer : ${borrowed.join(', ')}`);
+
+    state.adaptedCV = fidelity.cv;
     state.coverLetter = letterResult;
+    state.panel = panel;
+    state.fidelity = { removed: fidelity.removed, warnings: fidelity.warnings };
+    state.coverage = coverage;
+    state.modelUsed = getLastModelUsed();
 
     // Save to history
     saveToHistory({
@@ -1234,11 +1565,16 @@ async function handleGenerate() {
       date: new Date().toISOString(),
       jobTitle,
       companyName,
-      candidateName: cvResult.personalInfo?.fullName || detectCandidateName(state.extractedText) || 'Candidat',
-      matchScore: cvResult.matchScore || null,
-      adaptedCV: cvResult,
+      jobDescription,
+      candidateName: fidelity.cv.personalInfo?.fullName || detectCandidateName(state.extractedText) || 'Candidat',
+      matchScore: fidelity.cv.matchScore || null,
+      adaptedCV: fidelity.cv,
       coverLetter: letterResult,
       cvTemplate: state.cvTemplate,
+      panel,
+      fidelity: state.fidelity,
+      coverage,
+      modelUsed: state.modelUsed,
     });
 
     // Short delay for the 100% progress bar to be visible
@@ -1256,7 +1592,7 @@ async function handleGenerate() {
       successMark.classList.add('is-fresh');
       resultTitle.focus({ preventScroll: true });
     } else {
-      showToast(letterResult ? 'Votre candidature est prête.' : 'Votre CV est prêt.', 'success', 8000, {
+      showToast(state.coverLetter ? 'Votre candidature est prête.' : 'Votre CV est prêt.', 'success', 8000, {
         label: 'Voir',
         onClick: () => goToStep(3),
       });
@@ -1308,6 +1644,9 @@ function renderResults() {
     adaptedCVPreview.innerHTML = renderLiveCVPreview(state.adaptedCV, state.cvTemplate);
     renderInsights(state.adaptedCV);
   }
+  renderPanel();
+  renderFidelity();
+  resultModel.textContent = state.modelUsed ? `Généré avec ${state.modelUsed}.` : '';
 
   if (hasLetter) {
     const subject = state.coverLetter.subject
@@ -1327,7 +1666,7 @@ function buildLetterText(letter) {
     ? 'Madame, Monsieur,'
     : rawGreeting.split('\n')[0] || 'Madame, Monsieur,';
   const candidateName = letter.candidateName || state.adaptedCV?.personalInfo?.fullName || '';
-  const signature = ['Cordialement,', candidateName].filter(Boolean).join('\n');
+  const signature = [letter.signoff || 'Cordialement,', candidateName].filter(Boolean).join('\n');
   return [greeting, cleanLetterPart(letter.opening), cleanLetterPart(letter.body), cleanLetterPart(letter.closing), signature]
     .filter(Boolean)
     .join('\n\n');
@@ -1355,8 +1694,102 @@ function renderInsights(cv) {
   keywordsList.innerHTML = keywords.map((keyword) => `<span>${esc(keyword)}</span>`).join('');
 
   const tips = (cv.improvements || []).filter(Boolean);
-  tipsCard.classList.toggle('hidden', tips.length === 0);
+  tipsCard.classList.toggle('hidden', tips.length === 0 || Boolean(state.panel?.questions?.length));
   tipsList.innerHTML = tips.map((tip) => `<li>${esc(tip)}</li>`).join('');
+
+  coverageLine.classList.toggle('hidden', !state.coverage);
+  if (state.coverage) {
+    const { before, after } = state.coverage;
+    coverageLine.textContent = `Termes de l’offre : ${before.found.length} dans votre CV, ${after.found.length} sur ${after.total} dans cette version.`;
+  }
+}
+
+function setVerdict(el, verdict) {
+  el.textContent = VERDICT_LABELS[verdict] || '';
+  el.className = `verdict verdict-${verdict}`;
+}
+
+function renderPanel() {
+  const panel = state.panel;
+  panelCard.classList.toggle('hidden', !panel);
+  questionsCard.classList.toggle('hidden', !panel?.questions?.length);
+  if (!panel) return;
+
+  panelFailed.classList.toggle('hidden', !panel.failed);
+  panelBody.classList.toggle('hidden', Boolean(panel.failed));
+  if (panel.failed) {
+    panelFailed.textContent = `Le panel n’a pas pu se terminer (${panel.reason}). Votre CV reste adapté et vérifié.`;
+    return;
+  }
+
+  setVerdict(screenBefore, panel.screenBefore);
+  screenArrow.classList.toggle('hidden', !panel.screenAfter);
+  screenAfter.classList.toggle('hidden', !panel.screenAfter);
+  if (panel.screenAfter) setVerdict(screenAfter, panel.screenAfter.verdict);
+
+  panelReviews.innerHTML = panel.reviews.map((review) => `
+    <li>
+      <details class="review-row">
+        <summary><span>${esc(review.label)}</span><span class="verdict verdict-${esc(review.verdict)}">${VERDICT_LABELS[review.verdict]}</span></summary>
+        ${review.worstLine ? `<blockquote>${esc(review.worstLine)}</blockquote>` : ''}
+        ${review.problems.length ? `<ul>${review.problems.map((problem) => `<li>${esc(problem)}</li>`).join('')}</ul>` : ''}
+      </details>
+    </li>`).join('');
+
+  panelMistakesBox.classList.toggle('hidden', panel.mistakes.length === 0);
+  const mistakeStatus = panel.rewriteKept === false ? 'relevée' : 'traitée';
+  panelMistakesTitle.textContent = `${formatCount(panel.mistakes.length, 'erreur')} ${mistakeStatus}${panel.mistakes.length > 1 ? 's' : ''}`;
+  panelMistakes.innerHTML = panel.mistakes.map((mistake) => `
+    <li>
+      ${mistake.line ? `<blockquote>${esc(mistake.line)}</blockquote>` : ''}
+      <span>${esc(mistake.why)}</span>
+      ${mistake.flaggedBy.length ? `<small>${esc(mistake.flaggedBy.join(', '))}</small>` : ''}
+    </li>`).join('');
+
+  questionsList.innerHTML = panel.questions.map((question, position) => `
+    <label class="field" for="question${position}">
+      <span>${esc(question)}</span>
+      <textarea id="question${position}" rows="2" data-question="${esc(question)}"></textarea>
+    </label>`).join('');
+}
+
+function renderFidelity() {
+  const fidelity = state.fidelity;
+  fidelityCard.classList.toggle('hidden', !fidelity);
+  if (!fidelity) return;
+  const { removed = [] } = fidelity;
+  const warnings = [...(fidelity.warnings || [])];
+  if (state.panel?.rewriteKept === false) warnings.unshift('La correction du panel perdait des termes de l’offre : la version adaptée a été conservée.');
+  fidelitySummary.textContent = removed.length + warnings.length === 0
+    ? 'Chiffres, compétences et coordonnées comparés à votre CV : rien à signaler.'
+    : `${formatCount(removed.length, 'élément')} retiré${removed.length > 1 ? 's' : ''} car absent${removed.length > 1 ? 's' : ''} de votre CV, ${warnings.length} à vérifier.`;
+  fidelityList.innerHTML = [
+    ...removed.map((item) => `<li><strong>${esc(item.text)}</strong><span>${esc(item.reason)}</span></li>`),
+    ...warnings.map((item) => `<li><span>${esc(item)}</span></li>`),
+  ].join('');
+}
+
+function handleQuestionsSubmit(event) {
+  event.preventDefault();
+  const answers = [...questionsList.querySelectorAll('textarea')]
+    .filter((field) => field.value.trim())
+    .map((field) => `- ${field.dataset.question} ${field.value.trim()}`);
+  if (answers.length === 0) {
+    showToast('Répondez à au moins une question.', 'info');
+    return;
+  }
+
+  const source = getSavedCV() || { name: 'CV collé', numPages: 0, method: 'manuel', size: 0 };
+  state.extractedText = `${state.extractedText.trim()}\n\nPRÉCISIONS DU CANDIDAT\n${answers.join('\n')}`;
+  saveSourceProfile(source.name, state.extractedText, source.numPages, source.method, source.size);
+  extractedTextEl.textContent = state.extractedText;
+
+  if (jobDescriptionInput.value.trim().length <= MIN_OFFER_LENGTH) {
+    showToast('Réponses ajoutées à votre CV. Collez l’offre pour relancer l’adaptation.', 'success', 6000);
+    goToStep(2);
+    return;
+  }
+  handleGenerate();
 }
 
 function getEntryTitle(entry) {
@@ -1549,7 +1982,8 @@ function formatDate(value) {
 function esc(text) {
   const div = document.createElement('div');
   div.textContent = text;
-  return div.innerHTML;
+  // innerHTML leaves quotes as they are: this text also ends up in attributes
+  return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function wait(ms) {
@@ -1647,11 +2081,16 @@ function removeHistoryEntry(entry) {
 function openHistoryEntry(entry) {
   state.adaptedCV = entry.adaptedCV;
   state.coverLetter = entry.coverLetter;
+  state.panel = entry.panel || null;
+  state.fidelity = entry.fidelity || null;
+  state.coverage = entry.coverage || null;
+  state.modelUsed = entry.modelUsed || null;
   state.cvTemplate = entry.cvTemplate || 'classic';
   includeCoverLetterInput.checked = Boolean(entry.coverLetter);
   updateGenerationChoice();
   jobTitleInput.value = entry.jobTitle || '';
   companyNameInput.value = entry.companyName || '';
+  jobDescriptionInput.value = entry.jobDescription || '';
   syncTemplateUI();
   successMark.classList.remove('is-fresh');
   setActiveDoc('cv');

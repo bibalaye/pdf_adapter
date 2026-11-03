@@ -217,6 +217,12 @@
                 <span class="switch"><input id="includeCoverLetter" type="checkbox" checked /><span></span></span>
               </label>
 
+              <label class="rail-row rail-toggle" for="includePanel">
+                <span class="rail-glyph"><svg class="icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg></span>
+                <span class="rail-copy"><strong>Panel de recrutement</strong><span>7 relecteurs, puis corrections</span></span>
+                <span class="switch"><input id="includePanel" type="checkbox" checked /><span></span></span>
+              </label>
+
               <div class="rail-row">
                 <span class="rail-glyph"><svg class="icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg></span>
                 <div id="languageLabel" class="rail-copy"><strong>Langue du contenu</strong><span>Texte rédigé par l’IA</span></div>
@@ -252,11 +258,13 @@
                 <span class="document-sheet sheet-front"><span></span><span></span><span></span><i></i></span>
               </div>
               <h1 id="loadingTitle">Analyse du CV et de l’offre...</h1>
-              <p>Gardez cet onglet ouvert, cela ne prend qu’un instant.</p>
+              <p id="loadingSubtitle">Gardez cet onglet ouvert.</p>
               <div class="progress-track"><span id="loadingProgressBar"></span></div>
               <ol class="loading-list">
                 <li id="loadingStep1" class="loading-step"><span class="loading-step-icon"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>Comprendre l’offre</li>
                 <li id="loadingStep2" class="loading-step"><span class="loading-step-icon"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>Adapter le CV</li>
+                <li id="loadingStepPanel" class="loading-step"><span class="loading-step-icon"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>Passer devant le panel</li>
+                <li id="loadingStepFix" class="loading-step"><span class="loading-step-icon"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>Corriger le CV</li>
                 <li id="loadingStep3" class="loading-step"><span class="loading-step-icon"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg></span>Rédiger la lettre</li>
               </ol>
             </div>
@@ -299,6 +307,38 @@
                   <div class="score-figure"><span id="scoreValue">0 %</span><strong id="scoreLabel"></strong></div>
                   <div class="meter" aria-hidden="true"><span id="scoreMeter"></span></div>
                   <small>Estimation de l’IA, à titre indicatif.</small>
+                  <p id="coverageLine" class="coverage-line hidden"></p>
+                </div>
+
+                <form id="questionsCard" class="card rail-card hidden">
+                  <h2><svg class="icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>Complétez votre CV</h2>
+                  <p class="field-help questions-intro">Ces faits manquent et ne peuvent pas être inventés. Répondez à ce qui s’applique : vos réponses rejoignent Mon CV et l’adaptation repart.</p>
+                  <div id="questionsList" class="questions-list"></div>
+                  <button id="questionsSubmit" class="btn btn-primary btn-sm btn-block" type="submit">Ajouter à mon CV et relancer</button>
+                </form>
+
+                <div id="panelCard" class="card rail-card hidden">
+                  <h2><svg class="icon" aria-hidden="true"><use href="/icons.svg#groups"></use></svg>Panel de recrutement</h2>
+                  <p id="panelFailed" class="field-help hidden"></p>
+                  <div id="panelBody">
+                    <div class="screen-compare">
+                      <span>Filtre : avant, après</span>
+                      <span id="screenBefore" class="verdict"></span>
+                      <span id="screenArrow" class="screen-arrow"><svg class="icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg></span>
+                      <span id="screenAfter" class="verdict"></span>
+                    </div>
+                    <ul id="panelReviews" class="review-list"></ul>
+                    <details id="panelMistakesBox" class="rail-disclosure">
+                      <summary><span id="panelMistakesTitle"></span><svg class="icon" aria-hidden="true"><use href="/icons.svg#keyboard_arrow_down"></use></svg></summary>
+                      <ol id="panelMistakes" class="mistake-list"></ol>
+                    </details>
+                  </div>
+                </div>
+
+                <div id="fidelityCard" class="card rail-card hidden">
+                  <h2><svg class="icon" aria-hidden="true"><use href="/icons.svg#fact_check"></use></svg>Contrôle de fidélité</h2>
+                  <p id="fidelitySummary" class="field-help"></p>
+                  <ul id="fidelityList" class="fidelity-list"></ul>
                 </div>
 
                 <div class="card rail-card">
@@ -323,6 +363,7 @@
                   <svg class="icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
                   <span>Relisez chaque document avant l’envoi : c’est vous qui décidez de ce qui vous représente.</span>
                 </p>
+                <p id="resultModel" class="result-model field-help"></p>
               </aside>
             </div>
           </div>
@@ -449,25 +490,74 @@
 
       <fieldset class="field-group">
         <legend>Fournisseur IA</legend>
-        <div class="provider-grid">
-          <label class="provider-option"><input type="radio" name="aiProvider" value="groq" /><span><strong>Groq</strong><small>Llama 3.3 70B</small></span><i class="provider-key hidden">Clé enregistrée</i></label>
-          <label class="provider-option"><input type="radio" name="aiProvider" value="gemini" /><span><strong>Google Gemini</strong><small>2.5 Flash</small></span><i class="provider-key hidden">Clé enregistrée</i></label>
-          <label class="provider-option"><input type="radio" name="aiProvider" value="mistral" /><span><strong>Mistral AI</strong><small>Mistral Small</small></span><i class="provider-key hidden">Clé enregistrée</i></label>
-        </div>
+        <div id="providerGrid" class="provider-grid"></div>
+        <button id="addCustomModelBtn" class="link-button add-model" type="button">Ajouter mon propre modèle</button>
       </fieldset>
 
+      <div id="customModelForm" class="custom-form hidden">
+        <strong id="customFormTitle">Ajouter un modèle</strong>
+        <p class="field-help">Tout service compatible avec l’API OpenAI : Ollama, LM Studio, vLLM ou un autre fournisseur.</p>
+        <label class="field" for="customName"><span>Nom</span><input id="customName" type="text" placeholder="Ex. Mon Ollama" autocomplete="off" /></label>
+        <label class="field" for="customUrl"><span>Adresse de l’API</span><input id="customUrl" type="text" placeholder="Ex. http://localhost:11434/v1" autocomplete="off" spellcheck="false" /></label>
+        <label class="field" for="customModelId"><span>Identifiant du modèle</span><input id="customModelId" type="text" placeholder="Ex. llama3.3" autocomplete="off" spellcheck="false" /></label>
+        <label class="field" for="customKey"><span>Clé API <small>optionnelle</small></span><input id="customKey" type="password" autocomplete="off" spellcheck="false" /></label>
+        <p id="customFormError" class="field-error hidden" role="alert"></p>
+        <div class="card-actions">
+          <button id="customSaveBtn" class="btn btn-primary btn-sm" type="button">Enregistrer ce modèle</button>
+          <button id="customCancelBtn" class="btn btn-ghost btn-sm" type="button">Annuler</button>
+        </div>
+      </div>
+
+      <div id="modelField" class="field">
+        <label for="modelSelect">Modèle</label>
+        <div class="model-row">
+          <select id="modelSelect"></select>
+          <button id="refreshModelsBtn" class="btn btn-secondary btn-icon" type="button" title="Actualiser la liste" aria-label="Actualiser la liste des modèles"><svg class="icon" aria-hidden="true"><use href="/icons.svg#restart_alt"></use></svg></button>
+        </div>
+        <input id="modelCustomId" class="hidden" type="text" aria-label="Identifiant exact du modèle" placeholder="Identifiant exact du modèle" autocomplete="off" spellcheck="false" />
+        <p id="modelHint" class="field-help hidden" role="status"></p>
+      </div>
+
+      <div id="customModelInfo" class="custom-info hidden">
+        <div class="rail-copy">
+          <strong id="customInfoModel" class="truncate"></strong>
+          <span id="customInfoUrl" class="truncate"></span>
+        </div>
+        <button id="customEditBtn" class="btn btn-ghost btn-sm" type="button">Modifier</button>
+        <button id="customDeleteBtn" class="btn btn-ghost btn-sm danger-text" type="button">Supprimer</button>
+      </div>
+
       <div class="field">
-        <label for="apiKey">Clé API</label>
+        <label id="apiKeyLabel" for="apiKey">Clé API</label>
         <div class="password-field">
           <input type="password" id="apiKey" placeholder="Collez votre clé ici" autocomplete="off" spellcheck="false" aria-describedby="apiKeyHelp" />
           <button id="toggleApiKey" class="btn btn-ghost btn-icon" type="button" aria-label="Afficher la clé"><svg class="icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg></button>
         </div>
         <p id="apiKeyError" class="field-error hidden" role="alert">Collez une clé API pour continuer.</p>
         <p id="apiKeyHelp" class="field-help">
-          Enregistrée dans ce navigateur, envoyée uniquement au fournisseur choisi.
+          Enregistrée dans ce navigateur, envoyée uniquement au service choisi.
           <a id="apiKeyLink" href="https://console.groq.com/keys" target="_blank" rel="noreferrer"><span id="apiKeyLinkLabel">Créer une clé Groq</span><svg class="icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg></a>
         </p>
+        <div class="connection-test">
+          <button id="testConnectionBtn" class="btn btn-secondary btn-sm" type="button">Tester la connexion</button>
+          <span id="testConnectionResult" class="field-help" role="status"></span>
+        </div>
       </div>
+
+      <p class="banner banner-info">
+        <svg class="icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg>
+        <span id="providerDataText"></span>
+      </p>
+
+      <label id="openrouterCollectionRow" class="check-row hidden">
+        <input type="checkbox" id="openrouterAllowCollection" />
+        <span><strong>Autoriser les hébergeurs qui peuvent conserver mes données</strong><small>Par défaut, AdaptaCV les exclut. Certains modèles gratuits peuvent alors être indisponibles.</small></span>
+      </label>
+
+      <label class="check-row">
+        <input type="checkbox" id="panelIsolated" />
+        <span><strong>Relecteurs isolés</strong><small>Sept requêtes séparées au lieu d’une. Plus proche d’un vrai panel, plus lent, et plus coûteux en quota.</small></span>
+      </label>
 
       <div class="field-group danger-zone">
         <div>
@@ -527,7 +617,7 @@
     <div class="modal-body">
       <ul class="data-flow">
         <li><span class="rail-glyph"><svg class="icon" aria-hidden="true"><use href="/icons.svg#lock"></use></svg></span><div><strong>Dans ce navigateur</strong><span>Votre CV, votre photo, vos clés API et votre historique. AdaptaCV n’a pas de serveur applicatif.</span></div></li>
-        <li><span class="rail-glyph"><svg class="icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg></span><div><strong>Chez le fournisseur IA choisi</strong><span>Le texte du CV et de l’offre, à chaque génération. Consultez sa politique de confidentialité.</span></div></li>
+        <li><span class="rail-glyph"><svg class="icon" aria-hidden="true"><use href="/icons.svg#key"></use></svg></span><div><strong>Chez le fournisseur IA ou le modèle choisi</strong><span>Le texte du CV et de l’offre, à chaque génération. Chaque fournisseur a ses propres règles, indiquées dans les réglages. Les offres gratuites peuvent utiliser ces données.</span></div></li>
         <li><span class="rail-glyph"><svg class="icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg></span><div><strong>Chez TeXLive.net</strong><span>Le contenu du document, uniquement quand vous demandez le PDF.</span></div></li>
       </ul>
     </div>

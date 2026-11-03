@@ -697,7 +697,7 @@ export function generateCoverLetterTemplate(letterData, candidateName, jobTitle,
 
 ${escapeLatex(letterContent).replace(/\\n/g, '\n\n')}
 
-\\closing{Cordialement,}
+\\closing{${escapeLatex(letterData.signoff || 'Cordialement,')}}
 
 \\end{letter}
 \\end{document}

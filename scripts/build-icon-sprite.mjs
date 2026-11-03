@@ -6,7 +6,7 @@ import { writeFile } from 'node:fs/promises';
 
 const ICONS = [
   'add', 'add_a_photo', 'arrow_back', 'arrow_forward', 'attach_file', 'check', 'check_circle', 'chevron_right',
-  'close', 'code', 'content_copy', 'content_paste', 'delete', 'description', 'draft', 'edit_note', 'error',
+  'close', 'code', 'content_copy', 'content_paste', 'delete', 'description', 'draft', 'edit_note', 'error', 'fact_check', 'groups', 'help',
   'keyboard_arrow_down', 'folder_open', 'history', 'info', 'mobile_arrow_down', 'key', 'label', 'language', 'lightbulb',
   'lock', 'open_in_new', 'palette', 'picture_as_pdf', 'progress_activity', 'restart_alt', 'search', 'tune',
   'upload_file', 'verified_user', 'visibility', 'visibility_off', 'work',
