@@ -40,8 +40,9 @@ Le projet poursuit un principe simple : **adapter la présentation, jamais inven
 - Questions posées au candidat pour les faits manquants, intégrées au CV source.
 - Prompts conçus pour limiter les inventions et préserver les informations factuelles.
 - Lettre de motivation courte et optionnelle.
-- Cinq modèles de CV différenciés : Clair, Moderne, Minimal, Exécutif et Créatif.
-- Aperçu des modèles avec données d’exemple.
+- Quinze modèles de CV classés en quatre familles, dont sept issus des bibliothèques libres moderncv, AltaCV et Jake's Resume ([sources et licences](THIRD_PARTY_NOTICES.md)).
+- Galerie avec filtres, aperçu de chaque modèle et vrai PDF d’exemple généré à partir de données fictives.
+- Titres de sections en français ou en anglais, selon la langue du dossier.
 - Photo facultative conservée dans sa qualité originale.
 - Historique local des candidatures, avec recherche, score d’adéquation et annulation de la suppression.
 - Mots-clés mis en avant et pistes d’amélioration affichés avec chaque dossier.
@@ -154,7 +155,7 @@ pdf_adapter/
 │   ├── fidelity.js             # Contrôle de fidélité, sans IA
 │   ├── pdf-parser.js           # Extraction PDF et OCR
 │   ├── pdf-generator.js        # Orchestration LaTeX
-│   ├── cv-templates.js         # Modèles de CV et lettre
+│   ├── cv-templates.js         # Catalogue et modèles LaTeX de CV et de lettre
 │   ├── style.css               # Système visuel et responsive
 │   ├── icon.js                 # Référence au sprite d’icônes
 │   └── toast.js                # Notifications
@@ -166,7 +167,10 @@ pdf_adapter/
 │   └── icon-*.png              # Icônes installables
 ├── scripts/
 │   ├── generate-brand-icons.mjs
-│   └── build-icon-sprite.mjs
+│   ├── build-icon-sprite.mjs
+│   └── check-latex-templates.mjs  # Compile chaque modèle sur TeXLive.net
+├── tests/                      # Contrôle de fidélité et structure des modèles
+├── THIRD_PARTY_NOTICES.md      # Sources et licences des modèles
 └── BRAND_MASTER_PROMPT.md      # Brief complet de branding
 ```
 
@@ -212,6 +216,24 @@ npm run build
 
 Pour les changements visuels, ajoutez des captures desktop et mobile. Pour les modèles LaTeX, testez les intitulés longs, les périodes longues, les sections absentes et les CV sur deux pages.
 
+`npm test` vérifie la structure du LaTeX généré, mais pas sa compilation. Après toute modification d’un modèle, compilez-les vraiment :
+
+```bash
+npm run check:latex            # tous les modèles, sans photo
+npm run check:latex -- --photo # tous les modèles, avec une photo de test
+npm run check:latex -- alta    # un seul modèle
+```
+
+Ce script envoie un CV fictif à TeXLive.net, puis enregistre les PDF et les journaux dans `latex-check/`.
+
+### Ajouter un modèle
+
+1. Ajoutez-le à `TEMPLATE_CATALOG` dans `src/cv-templates.js`, avec sa famille, ses faits (colonnes, photo) et sa source.
+2. Écrivez sa fonction de rendu et son cas dans `generateCVTemplate`.
+3. Si son aperçu demande une nouvelle mise en page, ajoutez-la dans `renderLiveCVPreview` et dans `src/style.css`.
+4. Vérifiez sa licence et citez-la dans `THIRD_PARTY_NOTICES.md`. Une classe LaTeX copiée dans `public/` doit le rester sans modification si sa licence l’exige.
+5. Lancez `npm test` puis `npm run check:latex`.
+
 ## Signaler un problème
 
 Ouvrez une [issue GitHub](https://github.com/bibalaye/pdf_adapter/issues) avec :
@@ -227,6 +249,9 @@ Ne publiez jamais une clé API, un CV réel ou des coordonnées personnelles dan
 ## Limites connues
 
 - La compilation d’aperçu dépend de TeXLive.net et d’une connexion réseau.
+- L’aperçu affiché dans l’application reste indicatif : seul le PDF fait foi.
+- Les modèles en deux colonnes peuvent être moins bien lus par certains logiciels de tri.
+- Les CV en alphabet non latin (cyrillique, arabe, chinois) ne bloquent plus la compilation, mais leur rendu n’est pas garanti.
 - L’OCR peut perdre la structure des documents complexes ou fortement illustrés.
 - La qualité de la sortie IA dépend du fournisseur, du modèle et de l’offre fournie.
 - Le panel simule des relecteurs : il ne prédit ni un vrai filtre ATS, ni une décision d'embauche.

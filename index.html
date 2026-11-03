@@ -297,6 +297,7 @@
                     <button id="docPreviewBtn" class="btn btn-primary btn-sm" type="button"><svg class="icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>Obtenir le PDF</button>
                   </div>
                 </div>
+                <p id="previewNote" class="preview-note">Aperçu indicatif de la mise en page : le PDF fait foi.</p>
                 <div id="adaptedCVPreview" class="result-preview" role="tabpanel" aria-labelledby="docTabCV"></div>
                 <div id="coverLetterPreview" class="result-preview letter-preview hidden" role="tabpanel" aria-labelledby="docTabLetter"></div>
               </article>
@@ -580,12 +581,21 @@
       <button class="btn btn-ghost btn-icon js-close-dialog" type="button" aria-label="Fermer"><svg class="icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg></button>
     </div>
     <div class="template-gallery">
-      <div id="templateOptions" class="template-options" role="radiogroup" aria-label="Modèles de CV"></div>
+      <div class="template-browser">
+        <div id="templateFilters" class="template-filters" role="group" aria-label="Filtrer les modèles"></div>
+        <div id="templateOptions" class="template-options" role="radiogroup" aria-label="Modèles de CV"></div>
+      </div>
       <div class="template-preview-stage"><div id="templatePreviewContent"></div></div>
     </div>
-    <div class="modal-foot modal-foot-split">
-      <span class="field-help">Aperçu avec des données d’exemple.</span>
-      <button id="previewSelectBtn" class="btn btn-primary" type="button"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>Choisir ce modèle</button>
+    <div class="modal-foot modal-foot-split template-foot">
+      <div class="template-facts">
+        <strong id="templateFacts"></strong>
+        <small id="templateCredit"></small>
+      </div>
+      <div class="template-actions">
+        <button id="templateSampleBtn" class="btn btn-secondary" type="button"><svg class="icon" aria-hidden="true"><use href="/icons.svg#picture_as_pdf"></use></svg>Voir un vrai PDF d’exemple</button>
+        <button id="previewSelectBtn" class="btn btn-primary" type="button"><svg class="icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>Choisir ce modèle</button>
+      </div>
     </div>
   </dialog>
 

@@ -33,11 +33,18 @@ import {
 import { runHiringPanel } from './hiring-panel.js';
 import { enforceFidelity, findUnattestedNumbers, keywordCoverage, cvToText } from './fidelity.js';
 import {
-  generateAdaptedCVPDF,
+  buildCVDocument,
   generateCoverLetterPDF,
   downloadPDF,
   getEngineForTemplate,
 } from './pdf-generator.js';
+import {
+  TEMPLATE_CATALOG,
+  TEMPLATE_CATEGORIES,
+  DEFAULT_TEMPLATE,
+  SAMPLE_CV,
+  getTemplateLabels,
+} from './cv-templates.js';
 import { showToast } from './toast.js';
 import { icon } from './icon.js';
 
@@ -53,17 +60,11 @@ const PANEL_ISOLATED_KEY = 'adaptacv_panel_isolated';
 const OTHER_MODEL = '__other__';
 const LOADING_HINT = 'Gardez cet onglet ouvert.';
 const VERDICT_LABELS = { yes: 'Retenu', maybe: 'À revoir', no: 'Écarté' };
+const MAX_PHOTO_SIDE = 900;
+const LEGACY_TEMPLATES = { altacv: 'alta', twentysecond: 'panel' };
 const MIN_OFFER_LENGTH = 20;
 const MIN_CV_LENGTH = 50;
 const FULL_OFFER_LENGTH = 200;
-
-const TEMPLATES = {
-  classic: { name: 'Clair', description: 'Une colonne sobre, le choix sûr pour la plupart des candidatures.' },
-  modern: { name: 'Moderne', description: 'Colonne latérale pour les contacts et les compétences.' },
-  minimal: { name: 'Minimal', description: 'En-tête centré, sans couleur, tout pour le texte.' },
-  executive: { name: 'Exécutif', description: 'Bandeau sombre, pour les postes à responsabilités.' },
-  bold: { name: 'Créatif', description: 'Compétences en tête et accent terracotta.' },
-};
 
 const ROUTES = {
   '#/cv-source': { view: 'new', step: 1, title: 'Nouvelle candidature' },
@@ -73,6 +74,11 @@ const ROUTES = {
   '#/mon-cv': { view: 'profile', title: 'Mon CV' },
 };
 const STEP_ROUTES = { 1: '#/cv-source', 2: '#/offre', 3: '#/dossier' };
+
+function resolveTemplate(id) {
+  const current = LEGACY_TEMPLATES[id] || id;
+  return TEMPLATE_CATALOG[current] ? current : DEFAULT_TEMPLATE;
+}
 
 // ============================================================
 // State
@@ -91,8 +97,8 @@ const state = {
   coverage: null,
   modelUsed: null,
   profilePhotoDataURL: null,
-  cvTemplate: TEMPLATES[storedTemplate] ? storedTemplate : 'classic',
-  letterTemplate: 'formal',
+  cvTemplate: resolveTemplate(storedTemplate),
+  docLanguage: 'fr',
   activeDoc: 'cv',
   generating: false,
   pendingGenerate: false,
@@ -179,6 +185,10 @@ const generationErrorSettings = $('#generationErrorSettings');
 // Template gallery
 const templateDialog = $('#templateDialog');
 const templateOptions = $('#templateOptions');
+const templateFilters = $('#templateFilters');
+const templateFacts = $('#templateFacts');
+const templateCredit = $('#templateCredit');
+const templateSampleBtn = $('#templateSampleBtn');
 const templatePreviewContent = $('#templatePreviewContent');
 const previewSelectBtn = $('#previewSelectBtn');
 
@@ -203,6 +213,7 @@ const docCopyBtn = $('#docCopyBtn');
 const docDownloadBtn = $('#docDownloadBtn');
 const docPreviewBtn = $('#docPreviewBtn');
 const adaptedCVPreview = $('#adaptedCVPreview');
+const previewNote = $('#previewNote');
 const coverLetterPreview = $('#coverLetterPreview');
 const scoreCard = $('#scoreCard');
 const scoreValue = $('#scoreValue');
@@ -634,10 +645,13 @@ function setupEventListeners() {
 
   // --- Template Gallery ---
   $$('.js-open-gallery').forEach((button) => button.addEventListener('click', openTemplateGallery));
-  templateOptions.addEventListener('change', (e) => {
-    templatePreviewContent.innerHTML = renderTemplatePreview(e.target.value);
+  templateOptions.addEventListener('change', (e) => renderGalleryPreview(e.target.value));
+  templateFilters.addEventListener('click', (e) => {
+    const filter = e.target.closest('[data-filter]');
+    if (filter) renderGalleryOptions(filter.dataset.filter);
   });
   previewSelectBtn.addEventListener('click', selectPreviewedTemplate);
+  templateSampleBtn.addEventListener('click', handleTemplateSample);
 
   // --- Generate ---
   generateBtn.addEventListener('click', handleGenerate);
@@ -1016,11 +1030,39 @@ function handleProfilePhotoUpload(file) {
   }
 
   const reader = new FileReader();
-  reader.onload = (e) => {
-    setProfilePhoto(e.target.result);
-    showToast('Photo ajoutée au CV.', 'success');
+  reader.onload = async (e) => {
+    setProfilePhoto(await downscalePhoto(e.target.result));
+    const unsupported = TEMPLATE_CATALOG[state.cvTemplate]?.photo === false;
+    showToast(unsupported ? `Photo enregistrée, mais le modèle « ${TEMPLATE_CATALOG[state.cvTemplate].name} » n’en affiche pas.` : 'Photo ajoutée au CV.', unsupported ? 'info' : 'success');
   };
   reader.readAsDataURL(file);
+}
+
+/**
+ * A photo printed at 3 cm needs no more: this keeps the document light to send and to compile.
+ */
+function downscalePhoto(dataURL) {
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onerror = () => resolve(dataURL);
+    image.onload = () => {
+      const largest = Math.max(image.width, image.height);
+      if (largest <= MAX_PHOTO_SIDE) {
+        resolve(dataURL);
+        return;
+      }
+      const ratio = MAX_PHOTO_SIDE / largest;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * ratio);
+      canvas.height = Math.round(image.height * ratio);
+      const context = canvas.getContext('2d');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
+    };
+    image.src = dataURL;
+  });
 }
 
 function setProfilePhoto(dataURL) {
@@ -1454,6 +1496,7 @@ async function handleGenerate() {
   const withLetter = includeCoverLetterInput.checked;
   const withPanel = includePanelInput.checked;
   const { language } = settings;
+  state.docLanguage = language;
 
   state.generating = true;
   goToStep(3);
@@ -1571,6 +1614,7 @@ async function handleGenerate() {
       adaptedCV: fidelity.cv,
       coverLetter: letterResult,
       cvTemplate: state.cvTemplate,
+      language,
       panel,
       fidelity: state.fidelity,
       coverage,
@@ -1623,6 +1667,7 @@ function setActiveDoc(doc) {
   adaptedCVPreview.classList.toggle('hidden', isLetter);
   coverLetterPreview.classList.toggle('hidden', !isLetter);
   docCopyBtn.classList.toggle('hidden', !isLetter);
+  previewNote.classList.toggle('hidden', isLetter);
 }
 
 function renderResults() {
@@ -1640,7 +1685,6 @@ function renderResults() {
   resultSubtitle.textContent = [title, company].filter(Boolean).join(' · ');
 
   if (state.adaptedCV) {
-    adaptedCVPreview.className = `result-preview cv-live-${state.cvTemplate}${state.activeDoc === 'letter' ? ' hidden' : ''}`;
     adaptedCVPreview.innerHTML = renderLiveCVPreview(state.adaptedCV, state.cvTemplate);
     renderInsights(state.adaptedCV);
   }
@@ -1803,11 +1847,11 @@ function getEntryTitle(entry) {
 // ============================================================
 // Downloads
 // ============================================================
-function handleDownloadCV() {
+async function handleDownloadCV() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
-    const doc = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
+    const doc = await buildCVDocument(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate, state.docLanguage);
     const jobTitle = jobTitleInput.value.trim() || 'poste';
     const safe = jobTitle.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿçæœ\s-]/g, '').replace(/\s+/g, '_').substring(0, 30);
     downloadPDF(doc, `CV_Adapte_${safe}.pdf`);
@@ -1824,7 +1868,7 @@ function handleDownloadCoverLetter() {
     const name = state.adaptedCV?.personalInfo?.fullName || detectCandidateName(state.extractedText);
     const jobTitle = jobTitleInput.value.trim();
     const company = companyNameInput.value.trim();
-    const doc = generateCoverLetterPDF(state.coverLetter, name, jobTitle, company, state.letterTemplate);
+    const doc = generateCoverLetterPDF(state.coverLetter, name, jobTitle, company, state.docLanguage);
     const safe = (company || jobTitle || 'candidature').replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿçæœ\s-]/g, '').replace(/\s+/g, '_').substring(0, 30);
     downloadPDF(doc, `Lettre_${safe}.pdf`); // Will save as .tex via pdf-generator.js downloadPDF fn
     showToast('Source LaTeX de la lettre téléchargée.', 'success');
@@ -1866,42 +1910,12 @@ async function handlePreviewCV() {
   if (!state.adaptedCV) return;
   try {
     const name = state.adaptedCV.personalInfo?.fullName || detectCandidateName(state.extractedText);
-    const tex = generateAdaptedCVPDF(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate);
-
-    // Clean up any previously injected companion files
-    latexForm.querySelectorAll('.aux-file-field').forEach(el => el.remove());
-
-    if (['altacv', 'maltacv', 'mycv'].includes(state.cvTemplate)) {
-      const clsFile = state.cvTemplate === 'mycv' ? 'my_cv.cls' : state.cvTemplate + '.cls';
-      try {
-        const clsResp = await fetch('/' + clsFile);
-        if (!clsResp.ok) throw new Error(`HTTP ${clsResp.status}`);
-        const clsText = await clsResp.text();
-
-        // Inject cls BEFORE the main textarea so TeXLive.net sees it first
-        const clsNameInput = document.createElement('input');
-        clsNameInput.type = 'hidden';
-        clsNameInput.name = 'filename[]';
-        clsNameInput.className = 'aux-file-field';
-        clsNameInput.value = clsFile;
-
-        const clsContentArea = document.createElement('textarea');
-        clsContentArea.name = 'filecontents[]';
-        clsContentArea.className = 'aux-file-field';
-        clsContentArea.style.display = 'none';
-        clsContentArea.value = clsText;
-
-        // Insert the cls fields at the TOP of the form, before the main document textarea
-        latexForm.insertBefore(clsContentArea, latexInput);
-        latexForm.insertBefore(clsNameInput, clsContentArea);
-
-      } catch (fetchErr) {
-        console.warn(`Could not fetch ${clsFile}:`, fetchErr);
-        showToast(`${clsFile} introuvable — vérifiez le dossier /public.`, 'error', 5000);
-      }
-    }
-
-    openLatexPreview('Votre CV en PDF', tex, getEngineForTemplate(state.cvTemplate, Boolean(state.profilePhotoDataURL)));
+    const doc = await buildCVDocument(state.adaptedCV, name, state.profilePhotoDataURL, state.cvTemplate, state.docLanguage);
+    const engine = getEngineForTemplate(state.cvTemplate, {
+      hasPhoto: Boolean(state.profilePhotoDataURL),
+      text: JSON.stringify(state.adaptedCV),
+    });
+    openLatexPreview('Votre CV en PDF', doc, engine);
   } catch (err) {
     console.error('Preview error:', err);
     showToast('Erreur lors de la création du PDF.', 'error');
@@ -1914,9 +1928,9 @@ function handlePreviewCoverLetter() {
     const name = state.adaptedCV?.personalInfo?.fullName || detectCandidateName(state.extractedText);
     const jobTitle = jobTitleInput.value.trim();
     const company = companyNameInput.value.trim();
-    const tex = generateCoverLetterPDF(state.coverLetter, name, jobTitle, company, state.letterTemplate);
-    latexForm.querySelectorAll('.aux-file-field').forEach(el => el.remove());
-    openLatexPreview('Votre lettre en PDF', tex, 'pdflatex');
+    const doc = generateCoverLetterPDF(state.coverLetter, name, jobTitle, company, state.docLanguage);
+    const engine = getEngineForTemplate(DEFAULT_TEMPLATE, { text: JSON.stringify(state.coverLetter) });
+    openLatexPreview('Votre lettre en PDF', doc, engine);
   } catch (err) {
     console.error('Preview error:', err);
     showToast('Erreur lors de la création du PDF.', 'error');
@@ -1993,33 +2007,93 @@ function wait(ms) {
 // ============================================================
 // Template Gallery
 // ============================================================
+function swatchClass(templateId) {
+  const layout = TEMPLATE_CATALOG[templateId]?.preview.layout || 'centered';
+  return `template-swatch sw-${layout}`;
+}
+
 function syncTemplateUI() {
-  const name = TEMPLATES[state.cvTemplate]?.name || state.cvTemplate;
-  $$('.js-template-name').forEach((el) => { el.textContent = name; });
-  $$('.js-template-swatch').forEach((el) => { el.className = `template-swatch js-template-swatch ${state.cvTemplate}`; });
+  const template = TEMPLATE_CATALOG[state.cvTemplate] || TEMPLATE_CATALOG[DEFAULT_TEMPLATE];
+  $$('.js-template-name').forEach((el) => { el.textContent = template.name; });
+  $$('.js-template-swatch').forEach((el) => {
+    el.className = `${swatchClass(state.cvTemplate)} js-template-swatch`;
+    el.style.setProperty('--sw', template.preview.dark || template.preview.accent);
+  });
+}
+
+function getGalleryChoice() {
+  return $('input[name="cvTemplateChoice"]:checked')?.value || null;
+}
+
+function renderGalleryOptions(filter = 'all', selected = getGalleryChoice()) {
+  const ids = Object.keys(TEMPLATE_CATALOG);
+  const visible = ids.filter((id) => filter === 'all' || TEMPLATE_CATALOG[id].category === filter);
+  const choice = visible.includes(selected) ? selected : visible[0];
+
+  const filters = [['all', 'Tous', ids.length], ...Object.entries(TEMPLATE_CATEGORIES).map(([key, label]) => [
+    key,
+    label,
+    ids.filter((id) => TEMPLATE_CATALOG[id].category === key).length,
+  ])];
+  templateFilters.innerHTML = filters.map(([key, label, count]) => `
+    <button class="template-filter" type="button" data-filter="${key}" aria-pressed="${key === filter}">${label} <span>${count}</span></button>`).join('');
+
+  templateOptions.innerHTML = visible.map((id) => {
+    const template = TEMPLATE_CATALOG[id];
+    const accent = template.preview.dark || template.preview.accent;
+    return `
+    <label class="template-option">
+      <input type="radio" name="cvTemplateChoice" value="${id}" ${id === choice ? 'checked autofocus' : ''} />
+      <span class="${swatchClass(id)}" style="--sw:${accent}" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span><strong>${template.name}</strong><small>${template.description}</small></span>
+    </label>`;
+  }).join('');
+  renderGalleryPreview(choice);
+}
+
+function renderGalleryPreview(templateId) {
+  const template = TEMPLATE_CATALOG[templateId];
+  templatePreviewContent.innerHTML = renderLiveCVPreview(SAMPLE_CV, templateId, 'fr');
+  // The preview is a whole page reduced to the width available here
+  const page = templatePreviewContent.firstElementChild;
+  if (page && templatePreviewContent.clientWidth) page.style.zoom = String(templatePreviewContent.clientWidth / 760);
+
+  const columns = template.columns === 1 ? 'Une colonne' : 'Deux colonnes, moins sûr pour les logiciels de tri';
+  templateFacts.textContent = `${columns} · ${template.photo ? 'Photo possible' : 'Sans photo'}`;
+  templateCredit.innerHTML = template.source
+    ? `Basé sur <a href="${template.source.url}" target="_blank" rel="noreferrer">${template.source.name}</a>, licence ${template.source.license}. Aperçu indicatif.`
+    : 'Modèle AdaptaCV. Aperçu indicatif.';
 }
 
 function openTemplateGallery() {
-  const current = TEMPLATES[state.cvTemplate] ? state.cvTemplate : 'classic';
-  templateOptions.innerHTML = Object.entries(TEMPLATES).map(([id, template]) => `
-    <label class="template-option">
-      <input type="radio" name="cvTemplateChoice" value="${id}" ${id === current ? 'checked autofocus' : ''} />
-      <span class="template-swatch ${id}" aria-hidden="true"><i></i><i></i><i></i></span>
-      <span><strong>${template.name}</strong><small>${template.description}</small></span>
-    </label>`).join('');
-  templatePreviewContent.innerHTML = renderTemplatePreview(current);
   templateDialog.showModal();
+  renderGalleryOptions('all', state.cvTemplate);
 }
 
 function selectPreviewedTemplate() {
-  const choice = $('input[name="cvTemplateChoice"]:checked')?.value;
+  const choice = getGalleryChoice();
   templateDialog.close();
   if (!choice || choice === state.cvTemplate) return;
   state.cvTemplate = choice;
   localStorage.setItem(TEMPLATE_KEY, choice);
   syncTemplateUI();
   if (state.adaptedCV) renderResults();
-  showToast(`Modèle « ${TEMPLATES[choice].name} » appliqué.`, 'success');
+  showToast(`Modèle « ${TEMPLATE_CATALOG[choice].name} » appliqué.`, 'success');
+}
+
+/**
+ * Compiles the template with the fictional CV: no personal data leaves the browser.
+ */
+async function handleTemplateSample() {
+  const choice = getGalleryChoice();
+  if (!choice) return;
+  try {
+    const doc = await buildCVDocument(SAMPLE_CV, '', '', choice, 'fr');
+    openLatexPreview(`Exemple du modèle ${TEMPLATE_CATALOG[choice].name}, données fictives`, doc, getEngineForTemplate(choice));
+  } catch (err) {
+    console.error('Sample error:', err);
+    showToast('Impossible de préparer cet exemple.', 'error');
+  }
 }
 
 // ============================================================
@@ -2085,7 +2159,8 @@ function openHistoryEntry(entry) {
   state.fidelity = entry.fidelity || null;
   state.coverage = entry.coverage || null;
   state.modelUsed = entry.modelUsed || null;
-  state.cvTemplate = entry.cvTemplate || 'classic';
+  state.cvTemplate = resolveTemplate(entry.cvTemplate);
+  state.docLanguage = entry.language || 'fr';
   includeCoverLetterInput.checked = Boolean(entry.coverLetter);
   updateGenerationChoice();
   jobTitleInput.value = entry.jobTitle || '';
@@ -2183,170 +2258,85 @@ function saveProfileText() {
 // ============================================================
 // CV previews
 // ============================================================
-function renderLiveCVPreview(cv, template) {
+const PREVIEW_ORDER = {
+  centered: ['summary', 'skills', 'experience', 'education', 'projects', 'certifications', 'languages', 'interests'],
+  impact: ['summary', 'skills', 'experience', 'education', 'projects', 'certifications', 'languages', 'interests'],
+  plain: ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'interests'],
+  banner: ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'interests'],
+  banking: ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'interests'],
+  margin: ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'interests'],
+  compact: ['summary', 'experience', 'education', 'projects', 'skills', 'certifications', 'languages', 'interests'],
+  academic: ['summary', 'education', 'experience', 'projects', 'certifications', 'skills', 'languages', 'interests'],
+  bar: ['skills', 'summary', 'experience', 'education', 'projects', 'certifications', 'languages', 'interests'],
+};
+
+function renderLiveCVPreview(cv, templateId, language = state.docLanguage) {
+  const template = TEMPLATE_CATALOG[templateId] || TEMPLATE_CATALOG[DEFAULT_TEMPLATE];
+  const { layout, accent, dark, soft, serif, nameRight, nameLeft, light } = template.preview;
+  const L = getTemplateLabels(language, templateId);
   const pi = cv.personalInfo || {};
-  const photo = state.profilePhotoDataURL
+  const clean = (items) => (items || []).filter(Boolean);
+
+  const photo = state.profilePhotoDataURL && template.photo
     ? `<img class="cvp-photo" src="${state.profilePhotoDataURL}" alt="Photo de profil">`
     : '';
-  const contactValues = [pi.email, pi.phone, pi.location, pi.linkedin, pi.website, pi.github].filter(Boolean);
-  const contacts = contactValues.map(esc).join(' · ');
-  const contactLines = contactValues.map(value => `<span>${esc(value)}</span>`).join('');
-  const skills = (cv.keySkills || []).map(skill => `<span>${esc(skill)}</span>`).join('');
-  const experience = (cv.experience || []).map(exp => `
+  const contactValues = clean([pi.email, pi.phone, pi.location, pi.linkedin, pi.website, pi.github]);
+  const heading = (title) => {
+    if (layout !== 'impact') return `<h4>${esc(title)}</h4>`;
+    const letters = [...title];
+    return `<h4><em>${esc(letters.slice(0, 3).join(''))}</em>${esc(letters.slice(3).join(''))}</h4>`;
+  };
+  const lines = (values) => (values.length ? `<div class="cvp-lines">${values.map((value) => `<span>${esc(value)}</span>`).join('')}</div>` : '');
+  const entry = (title, period, subtitle, description, bullets) => `
     <div class="cvp-entry">
-      <div class="cvp-entry-head"><strong>${esc(exp.title || '')}</strong><time>${esc(exp.period || '')}</time></div>
-      <b>${esc(exp.company || '')}</b>
-      ${exp.description ? `<p>${esc(exp.description)}</p>` : ''}
-      ${exp.bullets?.length ? `<ul>${exp.bullets.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
-    </div>`).join('');
-  const education = (cv.education || []).map(edu => `
-    <div class="cvp-entry">
-      <div class="cvp-entry-head"><strong>${esc(edu.degree || '')}</strong><time>${esc(edu.period || '')}</time></div>
-      <b>${esc(edu.school || '')}</b>
-      ${edu.description ? `<p>${esc(edu.description)}</p>` : ''}
-    </div>`).join('');
-  const projects = (cv.projects || []).map(project => `
-    <div class="cvp-entry">
-      <div class="cvp-entry-head"><strong>${esc(project.name || '')}</strong></div>
-      ${project.description ? `<p>${esc(project.description)}</p>` : ''}
-    </div>`).join('');
-  const certifications = (cv.certifications || []).filter(Boolean).map(esc).join(' · ');
-  const languages = (cv.languages || []).filter(Boolean).map(esc).join(' · ');
+      <div class="cvp-entry-head"><strong>${esc(title || '')}</strong><time>${esc(period || '')}</time></div>
+      ${subtitle ? `<b>${esc(subtitle)}</b>` : ''}
+      ${description ? `<p>${esc(description)}</p>` : ''}
+      ${bullets?.length ? `<ul>${bullets.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}
+    </div>`;
+  const wrap = (title, content, className = '') => (content ? `<section${className ? ` class="${className}"` : ''}>${heading(title)}${content}</section>` : '');
 
-  const summary = cv.summary ? `<section><h4>Profil</h4><p>${esc(cv.summary)}</p></section>` : '';
-  const experienceSection = experience ? `<section><h4>${template === 'executive' ? 'Parcours professionnel' : 'Expérience'}</h4>${experience}</section>` : '';
-  const educationSection = education ? `<section><h4>Formation</h4>${education}</section>` : '';
-  const skillsSection = skills ? `<section class="cvp-skills"><h4>${template === 'executive' ? 'Expertises' : 'Compétences'}</h4><div>${skills}</div></section>` : '';
-  const projectsSection = projects ? `<section><h4>Projets</h4>${projects}</section>` : '';
-  const certificationsSection = certifications ? `<section><h4>Certifications</h4><p>${certifications}</p></section>` : '';
-  const languagesSection = languages ? `<section><h4>Langues</h4><p>${languages}</p></section>` : '';
-  const extras = `${projectsSection}${certificationsSection}${languagesSection}`;
-  const header = `<header>${photo}<div><h3>${esc(pi.fullName || 'Candidat')}</h3><p>${esc(pi.title || '')}</p><small>${contacts}</small></div></header>`;
+  const skills = clean(cv.keySkills).map((skill) => `<span>${esc(skill)}</span>`).join('');
+  const blocks = {
+    summary: () => wrap(L.profile, cv.summary ? `<p>${esc(cv.summary)}</p>` : ''),
+    skills: () => wrap(L.skills, skills ? `<div>${skills}</div>` : '', 'cvp-skills'),
+    experience: () => wrap(L.experience, (cv.experience || []).map((exp) => entry(exp.title, exp.period, exp.company, exp.description, exp.bullets)).join('')),
+    education: () => wrap(L.education, (cv.education || []).map((edu) => entry(edu.degree, edu.period, edu.school, edu.description)).join('')),
+    projects: () => wrap(L.projects, (cv.projects || []).filter((project) => project?.name || project?.description).map((project) => entry(project.name, '', '', project.description)).join('')),
+    certifications: () => wrap(L.certifications, clean(cv.certifications).length ? `<p>${clean(cv.certifications).map(esc).join(' · ')}</p>` : ''),
+    languages: () => wrap(L.languages, clean(cv.languages).length ? `<p>${clean(cv.languages).map(esc).join(' · ')}</p>` : ''),
+    interests: () => wrap(L.interests, clean(cv.interests).length ? `<p>${clean(cv.interests).map(esc).join(' · ')}</p>` : ''),
+  };
 
-  if (template === 'modern') {
-    const sidebarLanguages = languages ? `<h4>Langues</h4><div class="cvp-sidebar-list">${(cv.languages || []).filter(Boolean).map(value => `<span>${esc(value)}</span>`).join('')}</div>` : '';
-    return `<div class="cvp-page"><aside>${photo}<h4>Contact</h4><div class="cvp-sidebar-list">${contactLines}</div>${skillsSection}${sidebarLanguages}</aside><main>${header.replace(photo, '')}${summary}${experienceSection}${educationSection}${projectsSection}${certificationsSection}</main></div>`;
+  const fullName = String(pi.fullName || 'Candidat');
+  const nameParts = fullName.trim().split(/\s+/);
+  const nameMarkup = layout === 'impact' && nameParts.length > 1
+    ? `<span>${esc(nameParts.slice(0, -1).join(' '))}</span> ${esc(nameParts.at(-1))}`
+    : esc(fullName);
+  const headerPhoto = layout === 'sidebar' ? '' : photo;
+  const header = `<header>${headerPhoto}<div><h3>${nameMarkup}</h3>${pi.title ? `<p>${esc(pi.title)}</p>` : ''}${layout === 'sidebar' ? '' : `<small>${contactValues.map(esc).join(' · ')}</small>`}</div></header>`;
+
+  const classes = ['cvp-page', `cvp-${layout}`, serif && 'cvp-serif', nameRight && 'cvp-name-right', nameLeft && 'cvp-name-left', light && 'cvp-light'].filter(Boolean).join(' ');
+  const style = `--cvp-accent:${accent};--cvp-dark:${dark || accent};--cvp-soft:${soft || '#EEF4EF'}`;
+
+  if (layout === 'sidebar') {
+    const side = [
+      photo,
+      wrap(L.contact, lines(contactValues)),
+      wrap(L.skills, lines(clean(cv.keySkills))),
+      wrap(L.languages, lines(clean(cv.languages))),
+      wrap(L.certifications, lines(clean(cv.certifications))),
+      wrap(L.interests, lines(clean(cv.interests))),
+    ].join('');
+    const main = ['summary', 'experience', 'education', 'projects'].map((key) => blocks[key]()).join('');
+    return `<div class="${classes}" style="${style}"><aside>${side}</aside><main>${header}${main}</main></div>`;
   }
-  if (template === 'bold') {
-    return `<div class="cvp-page"><i class="cvp-colorbar"></i>${header}${skillsSection}${summary}${experienceSection}${educationSection}${extras}</div>`;
+  if (layout === 'alta') {
+    const main = ['summary', 'experience', 'education', 'projects'].map((key) => blocks[key]()).join('');
+    const side = ['skills', 'languages', 'certifications', 'interests'].map((key) => blocks[key]()).join('');
+    return `<div class="${classes}" style="${style}">${header}<div class="cvp-columns"><main>${main}</main><aside>${side}</aside></div></div>`;
   }
-  return `<div class="cvp-page">${header}${summary}${template === 'classic' ? skillsSection : ''}${experienceSection}${educationSection}${template !== 'classic' ? skillsSection : ''}${extras}</div>`;
-}
-
-function renderTemplatePreview(template) {
-  // Sample data for preview
-  const previewPhoto = state.profilePhotoDataURL
-    ? `<img class="tpf-photo" src="${state.profilePhotoDataURL}" alt="Photo de profil">`
-    : '';
-  const sampleSkills = ['JavaScript', 'Python', 'React', 'Docker', 'SQL', 'Git'];
-  const skills = sampleSkills.map(s => `<span class="tpf-badge">${s}</span>`).join('');
-  const skillsBold = sampleSkills.map(s => `<span class="tpf-badge tpf-badge-bold">${s}</span>`).join('');
-
-  const sectionCV = (title, cls = '') => `<div class="tpf-section-title ${cls}">${title}</div>`;
-  const loremShort = 'Ingénieur logiciel orienté produit, spécialisé dans la conception d’interfaces web fiables et accessibles.';
-  const loremBullets = '<span class="tpf-bullet">Conception et évolution d’applications web avec React et Node.js</span><span class="tpf-bullet">Mise en place de pipelines CI/CD avec Docker et GitLab</span><span class="tpf-bullet">Amélioration continue des performances et de la qualité du code</span>';
-  const expBlock = () => `<div><div class="tpf-entry-title">Ingénieur logiciel</div><div class="tpf-entry-meta">Atelier Numérique · 2021–2024</div><div class="tpf-text">${loremBullets}</div></div>`;
-  const eduBlock = () => `<div><div class="tpf-entry-title">Master Informatique</div><div class="tpf-entry-meta">Université de Lyon · 2019</div></div>`;
-
-  switch (template) {
-    case 'classic':
-      return `<div class="tpf-classic">
-        <div class="tpf-topbar"></div>
-        <div class="tpf-body">
-          ${previewPhoto}
-          <div class="tpf-name">Camille Martin</div>
-          <div class="tpf-title">Ingénieur logiciel web</div>
-          <div class="tpf-contact">camille.martin@email.com  ·  +33 6 12 34 56  ·  Lyon, France</div>
-          <div class="tpf-divider"></div>
-          ${sectionCV('Profil')}
-          <div class="tpf-text">${loremShort}</div>
-          ${sectionCV('Compétences')}
-          <div>${skills}</div>
-          ${sectionCV('Expérience Professionnelle')}
-          ${expBlock()}
-          ${sectionCV('Formation')}
-          ${eduBlock()}
-        </div>
-      </div>`;
-
-    case 'modern':
-      return `<div class="tpf-modern">
-        <div class="tpf-sidebar">
-          ${previewPhoto}
-          ${sectionCV('Contact', 'tpf-section-title-dark')}
-          <div class="tpf-sidebar-list"><span>camille@email.com</span><span>+33 6 12 34 56</span><span>Lyon, France</span></div>
-          ${sectionCV('Compétences', 'tpf-section-title-dark')}
-          <div class="tpf-sidebar-list">${sampleSkills.map(skill => `<span>${skill}</span>`).join('')}</div>
-          ${sectionCV('Langues', 'tpf-section-title-dark')}
-          <div class="tpf-sidebar-list"><span>Français · Natif</span><span>Anglais · Courant</span></div>
-        </div>
-        <div class="tpf-main">
-          <div class="tpf-name">Camille Martin</div>
-          <div class="tpf-title">Ingénieur logiciel web</div>
-          ${sectionCV('Profil')}
-          <div class="tpf-text">${loremShort}</div>
-          ${sectionCV('Expérience')}
-          ${expBlock()}
-          ${sectionCV('Formation')}
-          ${eduBlock()}
-        </div>
-      </div>`;
-
-    case 'minimal':
-      return `<div class="tpf-minimal">
-        ${previewPhoto}
-        <div class="tpf-name">Camille Martin</div>
-        <div class="tpf-title">Ingénieur logiciel web</div>
-        <div class="tpf-contact">camille@email.com · +33 6 12 34 56 · Lyon</div>
-        <div class="tpf-sep"></div>
-        <div style="text-align:left;">
-          ${sectionCV('Profil')}
-          <div class="tpf-text">${loremShort}</div>
-          ${sectionCV('Expérience')}
-          ${expBlock()}
-          ${sectionCV('Formation')}
-          ${eduBlock()}
-          ${sectionCV('Compétences')}
-          <div>${skills}</div>
-        </div>
-      </div>`;
-
-    case 'executive':
-      return `<div class="tpf-executive">
-        <div class="tpf-band">
-          <div><div class="tpf-name">Camille Martin</div><div class="tpf-title">Ingénieur logiciel web</div></div>${previewPhoto}
-        </div>
-        <div class="tpf-body">
-          <div class="tpf-contact">camille@email.com · +33 6 12 34 56 · Lyon</div>
-          ${sectionCV('Profil exécutif')}
-          <div class="tpf-text">${loremShort}</div>
-          ${sectionCV('Expérience')}
-          ${expBlock()}
-          ${sectionCV('Formation')}
-          ${eduBlock()}
-          ${sectionCV('Expertises')}
-          <div>${skills}</div>
-        </div>
-      </div>`;
-
-    case 'bold':
-      return `<div class="tpf-bold">
-        <div class="tpf-bold-bar"></div>
-        <div class="tpf-body">
-          <div class="tpf-bold-head"><div><div class="tpf-name">Camille Martin</div><div class="tpf-title">Ingénieur logiciel web</div><div class="tpf-contact">camille@email.com · Lyon, France</div></div>${previewPhoto}</div>
-          <div class="tpf-bold-skills"><strong>Compétences clés</strong>${skillsBold}</div>
-          ${sectionCV('Profil')}
-          <div class="tpf-text">${loremShort}</div>
-          ${sectionCV('Expériences sélectionnées')}
-          ${expBlock()}
-          ${sectionCV('Formation')}
-          ${eduBlock()}
-        </div>
-      </div>`;
-
-    default:
-      return '<div class="tpf-classic"><div class="tpf-body">Aperçu non disponible</div></div>';
-  }
+  return `<div class="${classes}" style="${style}">${header}${PREVIEW_ORDER[layout].map((key) => blocks[key]()).join('')}</div>`;
 }
 
 // ============================================================
